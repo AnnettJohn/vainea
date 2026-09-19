@@ -1,0 +1,7 @@
+<div class="product-grid">
+  {% for p in products %}
+    {% include "partials/product_card.html" %}
+  {% else %}
+    <p>Keine Produkte gefunden.</p>
+  {% endfor %}
+</div>

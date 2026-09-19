@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section">
+  <div class="wrap">
+    <h1 class="h-editorial">Checkout — Zahlung</h1>
+    <p>Deine Bestellung <strong>{{ order.order_number }}</strong> über
+      €{{ "%.2f"|format(order.total) }} wurde angelegt, aber die Mollie-Zahlungsabwicklung
+      ist auf diesem Server noch nicht konfiguriert (fehlender <code>MOLLIE_API_KEY</code>
+      in <code>.env</code>).</p>
+    <p>Sobald ein gültiger Mollie-API-Key hinterlegt ist, führt dieser Schritt automatisch
+      zur Mollie-Zahlungsseite weiter.</p>
+  </div>
+</section>
+{% endblock %}

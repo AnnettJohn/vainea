@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block extra_head %}
+<script type="application/ld+json">{{ product_json_ld | safe }}</script>
+{% endblock %}
+{% block content %}
+<section class="section pdp" style="--accent: {{ product.state.hex_color }}">
+  <div class="wrap pdp-grid">
+    <div class="pdp-gallery">
+      {% for img in product.images %}
+      <img src="{{ img.url }}" alt="{{ img.alt_text or product.name }}">
+      {% else %}
+      <p>Kein Bild hinterlegt.</p>
+      {% endfor %}
+    </div>
+    <div class="pdp-info">
+      <p class="eyebrow">{{ product.category }}</p>
+      <h1 class="h-editorial">{{ product.name }}</h1>
+      <p class="pdp-price">€{{ "%.2f"|format(product.price) }}</p>
+
+      {% if state_variants|length > 1 %}
+      <div class="pdp-swatches">
+        {% for variant in state_variants %}
+        <a href="/products/{{ variant.slug }}"
+           class="swatch-btn {% if variant.id == product.id %}is-selected{% endif %}"
+           style="background: {{ variant.state.hex_color }}"
+           aria-label="{{ variant.state.name }}"></a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <form id="add-to-cart-form" hx-post="/cart/items" hx-target="#cart-toast" hx-swap="innerHTML">
+        <div class="pdp-sizes">
+          {% for size in product.sizes %}
+          <label class="size-option {% if size.stock == 0 %}is-disabled{% endif %}">
+            <input type="radio" name="product_size_id" value="{{ size.id }}"
+                   {% if size.stock == 0 %}disabled{% endif %}
+                   {% if loop.first and size.stock > 0 %}checked{% endif %}>
+            {{ size.size }}
+          </label>
+          {% endfor %}
+        </div>
+      </form>
+
+      <div class="pdp-actions">
+        <button class="btn" type="submit" form="add-to-cart-form" style="--accent: {{ product.state.hex_color }}">In den Warenkorb</button>
+        {% if current_user %}
+          {% if is_wishlisted %}
+          <form method="post" action="/account/wishlist/{{ product.id }}/remove" class="inline-form">
+            <button type="submit" class="btn btn--ghost wish-toggle is-active" aria-label="Von Wishlist entfernen">♥</button>
+          </form>
+          {% else %}
+          <form method="post" action="/account/wishlist/{{ product.id }}" class="inline-form">
+            <button type="submit" class="btn btn--ghost wish-toggle" aria-label="Zur Wishlist hinzufügen">♡</button>
+          </form>
+          {% endif %}
+        {% else %}
+        <a href="/account/login?next=/products/{{ product.slug }}" class="btn btn--ghost wish-toggle" aria-label="Zur Wishlist hinzufügen (Login erforderlich)">♡</a>
+        {% endif %}
+      </div>
+      <div id="cart-toast"></div>
+
+      {% if product.description %}
+      <p class="pdp-description">{{ product.description }}</p>
+      {% endif %}
+
+      <dl class="pdp-meta">
+        <dt>Material</dt><dd>{{ product.material }}</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+{% endblock %}

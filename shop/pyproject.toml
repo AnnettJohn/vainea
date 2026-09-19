@@ -1,0 +1,74 @@
+[project]
+name = "vainea-shop"
+version = "0.1.0"
+description = "VAINEA D2C Online-Shop – FastAPI/Jinja2/HTMX/SQLAlchemy/SQLAdmin/FastAPI-Users/Mollie"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "sqlalchemy>=2.0.30",
+    "asyncpg>=0.29",
+    "alembic>=1.13",
+    "sqladmin>=0.19",
+    "fastapi-users[sqlalchemy]>=13.0",
+    "mollie-api-python>=3.7",
+    "pydantic-settings>=2.3",
+    "python-dotenv>=1.0",
+    "itsdangerous>=2.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",
+    "ruff>=0.5",
+    # Startet für die Tests eine echte, ephemere Postgres-Instanz statt gegen
+    # SQLite zu testen - das Projekt nutzt Postgres-spezifische Typen (UUID,
+    # ARRAY, native ENUM), die SQLite nicht abbilden kann.
+    "pgserver>=0.1.4",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# Eine Session-weite Engine (siehe tests/conftest.py) braucht eine
+# Session-weite Event-Loop - pytest-asyncios Default (ein neuer Loop pro
+# Testfunktion) reißt sonst asyncpg-Verbindungen mitten im Test ab
+# ("another operation is in progress").
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+# Von Alembic generierte Migrationen nicht linten - Format/Zeilenlänge folgen
+# der Autogenerate-Vorlage, nicht unserem Stil, und ändern sich mit jeder
+# neuen Migration unabhängig von Codequalität.
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# SQLAlchemy löst diese Mapped["Klassenname"]-Vorwärtsreferenzen zur Laufzeit
+# über die Mapper-Registry auf, nicht über Pythons normale Namensauflösung -
+# ruff kennt diesen Mechanismus nicht und meldet sie fälschlich als F821.
+"app/models/*.py" = ["F821"]
+# Kompakte, absichtlich breite Datentabelle (1:1 aus dem Click-Dummy
+# übernommen) - Umbrechen würde die Zeile-für-Zeile-Vergleichbarkeit mit
+# index.html zerstören.
+"scripts/seed.py" = ["E501"]
+# Bewusst nicht-alphabetische Import-Reihenfolge, die einen zirkulären Import
+# umgeht (siehe Kommentar in der Datei) - ein isort/ruff-Autofix würde genau
+# diese Reihenfolge wieder zerstören.
+"alembic/env.py" = ["I001"]

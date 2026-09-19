@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section">
+  <div class="wrap">
+    <h1 class="h-editorial">Shop</h1>
+
+    <form class="shop-filters"
+          hx-get="/shop" hx-target="#product-grid" hx-push-url="true" hx-trigger="change">
+      <select name="state">
+        <option value="">Alle States</option>
+        {% for s in nav_states %}
+        <option value="{{ s.slug }}" {% if active_state == s.slug %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="material">
+        <option value="">Alle Materialien</option>
+        {% for m in ["Frottee", "Canvas", "Edelstahl"] %}
+        <option value="{{ m }}" {% if active_material == m %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    <div id="product-grid">
+      {% include "partials/product_grid.html" %}
+    </div>
+  </div>
+</section>
+{% endblock %}

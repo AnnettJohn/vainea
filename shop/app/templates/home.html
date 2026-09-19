@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section states-grid">
+  <div class="wrap">
+    <p class="eyebrow">Wear your state of mind</p>
+    <div class="states-list">
+      {% for s in states %}
+      <a class="state-card" href="/states/{{ s.slug }}" style="--accent: {{ s.hex_color }}">
+        <img src="{{ s.hero_image_url }}" alt="{{ s.name }}" style="object-position: {{ s.hero_image_position }}">
+        <div class="state-card-body">
+          <span class="state-num">{{ s.num }}</span>
+          <h2 class="h-editorial">{{ s.name }}</h2>
+          <p>{{ s.mood_text }}</p>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

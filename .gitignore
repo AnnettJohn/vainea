@@ -1,0 +1,9 @@
+.DS_Store
+shop/.venv/
+shop/__pycache__/
+shop/**/__pycache__/
+shop/*.egg-info/
+shop/vainea_shop.egg-info/
+shop/.pytest_cache/
+shop/.ruff_cache/
+shop/.env

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+defaults:
+  run:
+    working-directory: shop
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: shop/pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Ruff
+        run: ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: shop/pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      # Kein Postgres-Service nötig: tests/conftest.py startet über das
+      # pgserver-Paket eine eigene, ephemere Postgres-Instanz im selben
+      # Prozess (siehe shop/README.md, Abschnitt "Tests").
+      - name: Run tests
+        run: python -m pytest -v

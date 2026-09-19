@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section">
+  <div class="wrap checkout-grid">
+    <div class="checkout-form">
+      <h1 class="h-editorial">Checkout — Adresse</h1>
+
+      {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+
+      {% if not cart or not cart.items %}
+      <p>Dein Warenkorb ist leer. <a href="/shop">Weiter shoppen</a></p>
+      {% else %}
+      <form method="post" action="/checkout/address" class="address-form">
+        <label>E-Mail
+          <input type="email" name="email" required value="{{ form_data.email or '' }}">
+        </label>
+
+        <fieldset>
+          <legend>Lieferadresse</legend>
+          <label>Name
+            <input type="text" name="shipping_name" required value="{{ form_data.shipping_name or '' }}">
+          </label>
+          <label>Straße & Hausnummer
+            <input type="text" name="shipping_street" required value="{{ form_data.shipping_street or '' }}">
+          </label>
+          <label>PLZ
+            <input type="text" name="shipping_zip" required value="{{ form_data.shipping_zip or '' }}">
+          </label>
+          <label>Stadt
+            <input type="text" name="shipping_city" required value="{{ form_data.shipping_city or '' }}">
+          </label>
+          <label>Land (ISO-Code, z. B. DE)
+            <input type="text" name="shipping_country" required maxlength="2"
+                   value="{{ form_data.shipping_country or 'DE' }}"
+                   hx-get="/checkout/shipping-methods" hx-trigger="change, keyup delay:500ms"
+                   hx-target="#shipping-methods" hx-include="this">
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Versandmethode</legend>
+          <div id="shipping-methods">
+            {% include "partials/shipping_methods_options.html" %}
+          </div>
+        </fieldset>
+
+        <details>
+          <summary>Abweichende Rechnungsadresse?</summary>
+          <fieldset>
+            <legend>Rechnungsadresse</legend>
+            <label>Name
+              <input type="text" name="billing_name" value="{{ form_data.billing_name or '' }}">
+            </label>
+            <label>Straße & Hausnummer
+              <input type="text" name="billing_street" value="{{ form_data.billing_street or '' }}">
+            </label>
+            <label>PLZ
+              <input type="text" name="billing_zip" value="{{ form_data.billing_zip or '' }}">
+            </label>
+            <label>Stadt
+              <input type="text" name="billing_city" value="{{ form_data.billing_city or '' }}">
+            </label>
+            <label>Land (ISO-Code)
+              <input type="text" name="billing_country" maxlength="2" value="{{ form_data.billing_country or '' }}">
+            </label>
+          </fieldset>
+        </details>
+
+        <label>Rabattcode (optional)
+          <input type="text" name="discount_code" value="{{ form_data.discount_code or '' }}">
+        </label>
+
+        <button class="btn" type="submit">Weiter zur Zahlung</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <aside class="checkout-summary">
+      <h2 class="h-editorial">Deine Bestellung</h2>
+      {% if cart and cart.items %}
+      <ul>
+        {% for item in cart.items %}
+        <li>{{ item.quantity }}× {{ item.product.name }} ({{ item.product_size.size }}) —
+          €{{ "%.2f"|format(item.product.price * item.quantity) }}</li>
+        {% endfor %}
+      </ul>
+      <p class="cart-subtotal">Zwischensumme: <strong>€{{ "%.2f"|format(subtotal) }}</strong></p>
+      <p class="cart-note">Versandkosten und Rabatt werden nach Eingabe der Adresse berechnet.</p>
+      {% endif %}
+    </aside>
+  </div>
+</section>
+{% endblock %}

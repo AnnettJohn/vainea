@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section">
+  <div class="wrap">
+    <h1 class="h-editorial">Mein Konto</h1>
+    <p class="account-email">{{ current_user.email }}</p>
+
+    <div class="account-grid">
+      <div class="account-block">
+        <h2 class="h-editorial">Bestellungen</h2>
+        {% if not orders %}
+        <p>Noch keine Bestellungen. <a href="/shop">Jetzt shoppen</a></p>
+        {% else %}
+        <ul class="order-list">
+          {% for order in orders %}
+          <li class="order-row">
+            <div>
+              <strong>{{ order.order_number }}</strong>
+              <span class="order-status order-status--{{ order.status.value }}">{{ order.status.value }}</span>
+            </div>
+            <div class="order-meta">
+              {{ order.created_at.strftime("%d.%m.%Y") }} —
+              {{ order.items|length }} Artikel — €{{ "%.2f"|format(order.total) }}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+
+      <div class="account-block">
+        <h2 class="h-editorial">Wishlist</h2>
+        {% if not wishlist %}
+        <p>Noch nichts gemerkt. <a href="/shop">Jetzt stöbern</a></p>
+        {% else %}
+        <ul class="wishlist-list">
+          {% for item in wishlist %}
+          <li>
+            <a href="/products/{{ item.product.slug }}">{{ item.product.name }}</a>
+            <form method="post" action="/account/wishlist/{{ item.product.id }}/remove" class="inline-form">
+              <button type="submit" class="link-btn">Entfernen</button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+
+      <div class="account-block">
+        <h2 class="h-editorial">Adressen</h2>
+        {% if not addresses %}
+        <p>Noch keine Adressen hinterlegt (erscheinen nach der ersten Bestellung).</p>
+        {% else %}
+        <ul class="address-list">
+          {% for addr in addresses %}
+          <li>{{ addr.name }}, {{ addr.street }}, {{ addr.zip }} {{ addr.city }}, {{ addr.country }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

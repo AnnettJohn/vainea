@@ -1,0 +1,11 @@
+{% if not zone or not zone.rates %}
+<p class="form-hint">Keine Versandoption für dieses Land verfügbar.</p>
+{% else %}
+{% for rate in zone.rates|sort(attribute='price') %}
+{% set cost = shipping_cost_for(zone, rate, subtotal) %}
+<label class="shipping-option">
+  <input type="radio" name="shipping_rate_id" value="{{ rate.id }}" {% if loop.first %}checked{% endif %}>
+  {{ rate.method_name }} — {% if cost == 0 %}kostenlos{% else %}€{{ "%.2f"|format(cost) }}{% endif %}
+</label>
+{% endfor %}
+{% endif %}

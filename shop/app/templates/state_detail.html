@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section state-hero" style="--accent: {{ state.hex_color }}">
+  <div class="wrap">
+    <p class="eyebrow">{{ state.num }} — {{ state.name }}</p>
+    <h1 class="h-editorial">{{ state.brand_line }}</h1>
+    <p>{{ state.mood_text }}</p>
+    <p class="state-story">{{ state.story_text }}</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <h2 class="h-editorial">Shop {{ state.name }}</h2>
+    {% include "partials/product_grid.html" %}
+  </div>
+</section>
+{% endblock %}

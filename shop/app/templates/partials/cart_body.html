@@ -1,0 +1,32 @@
+{% if not cart or not cart.items %}
+<p>Dein Warenkorb ist leer. <a href="/shop">Weiter shoppen</a></p>
+{% else %}
+<ul class="cart-lines">
+  {% for item in cart.items %}
+  <li class="cart-line">
+    {% if item.product.images %}
+    <img src="{{ item.product.images[0].url }}" alt="{{ item.product.name }}">
+    {% endif %}
+    <div class="cart-line-info">
+      <p class="cart-line-name">{{ item.product.name }}</p>
+      <p class="cart-line-size">Größe: {{ item.product_size.size }}</p>
+      <div class="cart-line-actions">
+        <form hx-post="/cart/items/{{ item.id }}/quantity" hx-target="#cart-body" hx-swap="innerHTML">
+          <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product_size.stock }}">
+          <button type="submit" class="btn btn--ghost">Aktualisieren</button>
+        </form>
+        <form hx-post="/cart/items/{{ item.id }}/remove" hx-target="#cart-body" hx-swap="innerHTML">
+          <button type="submit" class="link-btn">Entfernen</button>
+        </form>
+      </div>
+    </div>
+    <p class="cart-line-price">€{{ "%.2f"|format(item.product.price * item.quantity) }}</p>
+  </li>
+  {% endfor %}
+</ul>
+<div class="cart-summary">
+  <p class="cart-subtotal">Zwischensumme: <strong>€{{ "%.2f"|format(subtotal) }}</strong></p>
+  <p class="cart-note">Versand und eventuelle Rabatte werden im nächsten Schritt berechnet.</p>
+  <a class="btn" href="/checkout/address">Zur Kasse</a>
+</div>
+{% endif %}

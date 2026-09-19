@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section">
+  <div class="wrap narrow-form">
+    <h1 class="h-editorial">Konto erstellen</h1>
+    {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+    <form method="post" action="/account/register" class="address-form">
+      <label>E-Mail
+        <input type="email" name="email" required autofocus>
+      </label>
+      <label>Passwort
+        <input type="password" name="password" required minlength="8">
+      </label>
+      <button class="btn" type="submit">Konto erstellen</button>
+    </form>
+    <p class="form-hint">Bereits ein Konto? <a href="/account/login">Jetzt einloggen</a></p>
+  </div>
+</section>
+{% endblock %}

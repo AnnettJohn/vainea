@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="section">
+  <div class="wrap">
+    {% if order.status.value == "paid" %}
+    <h1 class="h-editorial">Danke für deine Bestellung!</h1>
+    <p>Bestellung <strong>{{ order.order_number }}</strong> ist bezahlt. Eine Bestätigung
+      geht an {{ order.guest_email }}.</p>
+    {% elif order.status.value in ("failed", "canceled") %}
+    <h1 class="h-editorial">Zahlung nicht abgeschlossen</h1>
+    <p>Bestellung <strong>{{ order.order_number }}</strong> konnte nicht bezahlt werden.
+      Du kannst es im <a href="/cart">Warenkorb</a> erneut versuchen.</p>
+    {% else %}
+    <h1 class="h-editorial">Zahlung wird verarbeitet</h1>
+    <p>Bestellung <strong>{{ order.order_number }}</strong> wurde übermittelt. Sobald die
+      Zahlung bestätigt ist, erhältst du eine E-Mail an {{ order.guest_email }}.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
