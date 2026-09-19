@@ -1,0 +1,20 @@
+# Reverse Proxy mit automatischem TLS (Let's Encrypt) via Caddy, siehe
+# Pflichtenheft "Deployment & Hosting". Domain(s) vor dem Start anpassen -
+# Caddy holt sich das Zertifikat automatisch, sobald die Domain per DNS auf
+# diesen Server zeigt und Port 80+443 erreichbar sind.
+
+vainea.de, www.vainea.de {
+	reverse_proxy app:8000
+}
+
+# Das Admin-Interface läuft vorerst unter dem geschützten Pfad /admin auf
+# der Root-Domain (siehe Pflichtenheft) und braucht daher keinen eigenen
+# Caddy-Block. Zieht es später auf eine eigene Subdomain um, hier ergänzen,
+# z. B. mit zusätzlichem Zugriffsschutz vor dem eigentlichen Login:
+#
+# admin.vainea.de {
+# 	basic_auth {
+# 		<user> <bcrypt-hash>
+# 	}
+# 	reverse_proxy app:8000
+# }

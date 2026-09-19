@@ -1,0 +1,66 @@
+# Referenz-Setup für einen einzelnen Hetzner-Server (siehe Pflichtenheft,
+# Deployment & Hosting): FastAPI-App hinter Caddy (automatisches TLS),
+# Postgres läuft hier mit ("mitlaufende Instanz"); für eine separate
+# Postgres-Instanz einfach den postgres-Service entfernen und DATABASE_URL
+# in der app-Umgebung entsprechend setzen.
+#
+# Vor dem ersten Start eine .env-Datei neben dieser Datei anlegen (siehe
+# .env.example) - docker compose lädt sie automatisch für die
+# ${VARIABLEN}-Interpolation unten.
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://vainea:${POSTGRES_PASSWORD}@postgres:5432/vainea
+      SECRET_KEY: ${SECRET_KEY}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
+      MOLLIE_API_KEY: ${MOLLIE_API_KEY}
+      MOLLIE_WEBHOOK_URL: ${MOLLIE_WEBHOOK_URL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_USE_TLS: ${SMTP_USE_TLS}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME}
+      ENVIRONMENT: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8000"
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vainea
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: vainea
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vainea"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

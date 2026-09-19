@@ -8,3 +8,4 @@ shop/vainea_shop.egg-info/
 shop/.pytest_cache/
 shop/.ruff_cache/
 shop/.env
+shop/build/
