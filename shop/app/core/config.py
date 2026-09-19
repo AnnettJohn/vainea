@@ -24,6 +24,18 @@ class Settings(BaseSettings):
     smtp_from_email: str = "no-reply@vainea.de"
     smtp_from_name: str = "VAINEA"
 
+    # Objektspeicher für Produktbilder (Hetzner Object Storage, S3-kompatibel;
+    # siehe Pflichtenheft "Produktbilder in Objektspeicher statt lokal auf
+    # dem Server"). Leer lassen für lokale Entwicklung - Bilder bleiben dann
+    # unter app/static/images (siehe scripts/upload_images_to_storage.py für
+    # die einmalige Migration bei Produktions-Deployment).
+    s3_endpoint_url: str = ""
+    s3_region: str = "fsn1"
+    s3_bucket: str = ""
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    s3_public_base_url: str = ""
+
     environment: str = "development"
 
     @property
