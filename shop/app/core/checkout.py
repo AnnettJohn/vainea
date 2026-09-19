@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -6,11 +7,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.email import send_order_confirmation_email
 from app.models.cart import Cart
 from app.models.discount import DiscountCode, DiscountType
 from app.models.order import Order, OrderStatus
 from app.models.product import ProductSize
 from app.models.shipping import ShippingRate, ShippingZone
+
+logger = logging.getLogger(__name__)
 
 
 def generate_order_number() -> str:
@@ -182,6 +186,15 @@ async def apply_payment_status(db: AsyncSession, order: Order, mollie_status: st
             discount = discount_result.scalar_one_or_none()
             if discount is not None:
                 discount.usage_count += 1
+
+        try:
+            await send_order_confirmation_email(order)
+        except Exception:
+            # Der Zahlungsstatus ist die verbindliche Wahrheit und muss auch
+            # committet werden, wenn der Mailversand (z. B. SMTP down)
+            # fehlschlägt - dann fehlt nur die Bestätigungsmail, nicht die
+            # bezahlte Bestellung selbst.
+            logger.exception("Bestellbestätigung für %s konnte nicht versendet werden", order.order_number)
 
     elif mollie_status in ("failed", "expired"):
         order.status = OrderStatus.FAILED

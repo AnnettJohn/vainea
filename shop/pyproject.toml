@@ -29,6 +29,9 @@ dev = [
     # SQLite zu testen - das Projekt nutzt Postgres-spezifische Typen (UUID,
     # ARRAY, native ENUM), die SQLite nicht abbilden kann.
     "pgserver>=0.1.4",
+    # Echter (lokaler) SMTP-Server für die Tests der Bestellbestätigungsmail,
+    # statt smtplib zu mocken.
+    "aiosmtpd>=1.4",
 ]
 
 [build-system]

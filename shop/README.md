@@ -1,5 +1,7 @@
 # VAINEA Shop
 
+[![CI](https://github.com/AnnettJohn/vainea/actions/workflows/ci.yml/badge.svg)](https://github.com/AnnettJohn/vainea/actions/workflows/ci.yml)
+
 FastAPI/Jinja2/HTMX/SQLAlchemy/SQLAdmin/FastAPI-Users/Mollie-Umsetzung des
 VAINEA-Onlineshops gemäß [`../PFLICHTENHEFT.md`](../PFLICHTENHEFT.md).
 
@@ -45,6 +47,17 @@ asyncio.run(main())
 "
 ```
 
+Für Bestellbestätigungsmails lokal einen SMTP-Catcher starten (fängt Mails
+ab, kein echter Versand nötig - Web-UI unter http://localhost:8025):
+
+```bash
+docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit
+```
+
+Die Default-Werte in `.env.example` (`SMTP_HOST=localhost`, `SMTP_PORT=1025`,
+kein Login/TLS) passen direkt zu Mailhog/Mailpit. Für Produktion durch einen
+echten SMTP-Anbieter ersetzen.
+
 Dev-Server starten:
 
 ```bash
@@ -61,12 +74,16 @@ python -m pytest
 ```
 
 Startet für die Dauer des Testlaufs automatisch eine eigene, ephemere
-Postgres-Instanz (kein laufender Server nötig) und legt darin States/
-Produkte/Versandzonen wie im Seed-Skript an. 41 Tests decken die zentralen
-Flows ab: Warenkorb, Checkout (inkl. Versandzonen-Fallback, Bestands-
-reservierung mit Race-Condition-Fall, Rabattcodes, Webhook-Idempotenz),
-Login/Registrierung/Wishlist, SQLAdmin-Zugriffsschutz sowie Sitemap/
-Schema.org-Markup.
+Postgres-Instanz und einen echten lokalen SMTP-Server (kein laufender
+Server/Docker nötig) und legt darin States/Produkte/Versandzonen wie im
+Seed-Skript an. 44 Tests decken die zentralen Flows ab: Warenkorb, Checkout
+(inkl. Versandzonen-Fallback, Bestandsreservierung mit Race-Condition-Fall,
+Rabattcodes, Webhook-Idempotenz), Bestellbestätigungsmail (inkl. Ausfall-
+sicherheit bei SMTP-Fehlern), Login/Registrierung/Wishlist,
+SQLAdmin-Zugriffsschutz sowie Sitemap/Schema.org-Markup.
+
+Läuft bei jedem Push/PR automatisch über [GitHub Actions](../.github/workflows/ci.yml)
+(Lint + Tests, siehe Badge oben).
 
 ## Stand
 
@@ -93,6 +110,13 @@ vollständiger Checkout-Flow:
   (Herz-Button auf der PDP) und den zuletzt verwendeten Adressen aus
   vergangenen Bestellungen. Wird beim Checkout eingeloggt bestellt, landet
   die Order über `user_id` im Konto.
+- **Bestellbestätigung per E-Mail**: Sobald der Webhook eine Zahlung als
+  "paid" bestätigt, geht automatisch eine HTML+Text-Mail mit Bestellnummer,
+  Positionen, Summen und Lieferadresse an `guest_email` raus (SMTP via
+  Python-Standardbibliothek, kein zusätzlicher E-Mail-Dienstanbieter nötig).
+  Schlägt der Versand fehl (SMTP nicht erreichbar), bleibt die Bestellung
+  trotzdem korrekt als bezahlt markiert - nur die Mail fehlt dann und wird
+  geloggt.
 
 Rechtstexte sind als Platzhalterseiten unter `/legal/*` verlinkt (Footer).
 
@@ -115,8 +139,9 @@ Gast-Nutzer cookie-basiert), kein eigenes Adressbuch-Modell (die
 Konto-Adressen sind read-only aus vergangenen Bestellungen abgeleitet, da
 das Pflichtenheft-Datenmodell keine eigene Address-Entität vorsieht).
 
-Noch offen: Bestellbestätigung per E-Mail (die Confirm-Seite kündigt sie an,
-verschickt aber noch keine - braucht einen SMTP-Anbieter), Homepage-Content
-aus dem Dummy (Hero-Slider, Quiz, Instagram-Teaser, Newsletter-Formular),
-sowie die endgültigen Inhalte für Rechtstexte und die finalen
-Versandzonen/-tarife (aktuell Platzhalter, siehe oben).
+Noch offen: Homepage-Content aus dem Dummy (Hero-Slider, Quiz,
+Instagram-Teaser, Newsletter-Formular), ein echter SMTP-Anbieter für
+Produktion (aktuell auf Mailhog/Mailpit-Defaults für lokale Entwicklung
+eingestellt), Deployment-Vorbereitung (Dockerfile, Caddy-Config für den
+Hetzner-Stack), sowie die endgültigen Inhalte für Rechtstexte und die
+finalen Versandzonen/-tarife (aktuell Platzhalter, siehe oben).

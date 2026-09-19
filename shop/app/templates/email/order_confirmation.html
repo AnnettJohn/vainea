@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Deine VAINEA-Bestellung {{ order.order_number }}</title>
+</head>
+<body style="margin:0;padding:0;background:#FBFAF7;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#252525;">
+  <div style="max-width:560px;margin:0 auto;padding:32px 24px;">
+    <h1 style="font-size:20px;margin:0 0 8px;">Danke für deine Bestellung!</h1>
+    <p style="margin:0 0 24px;color:rgba(37,37,37,.7);">
+      Bestellung <strong>{{ order.order_number }}</strong> ist bei uns eingegangen und bezahlt.
+    </p>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+      {% for item in order.items %}
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:8px 0;">{{ item.quantity }}× {{ item.product_name }} ({{ item.size }})</td>
+        <td style="padding:8px 0;text-align:right;">€{{ "%.2f"|format(item.line_total) }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;font-size:14px;">
+      <tr><td>Zwischensumme</td><td style="text-align:right;">€{{ "%.2f"|format(order.subtotal) }}</td></tr>
+      {% if order.discount_amount %}
+      <tr><td>Rabatt ({{ order.discount_code }})</td><td style="text-align:right;">-€{{ "%.2f"|format(order.discount_amount) }}</td></tr>
+      {% endif %}
+      <tr><td>Versand ({{ order.shipping_method_name }})</td><td style="text-align:right;">€{{ "%.2f"|format(order.shipping_cost) }}</td></tr>
+      <tr style="font-weight:600;"><td>Gesamt</td><td style="text-align:right;">€{{ "%.2f"|format(order.total) }}</td></tr>
+    </table>
+
+    <p style="margin:0 0 4px;font-weight:600;">Lieferadresse</p>
+    <p style="margin:0 0 24px;color:rgba(37,37,37,.7);">
+      {{ order.shipping_name }}<br>
+      {{ order.shipping_street }}<br>
+      {{ order.shipping_zip }} {{ order.shipping_city }}, {{ order.shipping_country }}
+    </p>
+
+    <p style="color:rgba(37,37,37,.5);font-size:12px;">VAINEA &middot; wearyourstateofmind.de</p>
+  </div>
+</body>
+</html>

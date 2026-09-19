@@ -1,0 +1,20 @@
+Danke für deine Bestellung!
+
+Bestellung {{ order.order_number }} ist bei uns eingegangen und bezahlt.
+
+{% for item in order.items -%}
+{{ item.quantity }}x {{ item.product_name }} ({{ item.size }}) - €{{ "%.2f"|format(item.line_total) }}
+{% endfor %}
+Zwischensumme: €{{ "%.2f"|format(order.subtotal) }}
+{% if order.discount_amount -%}
+Rabatt ({{ order.discount_code }}): -€{{ "%.2f"|format(order.discount_amount) }}
+{% endif -%}
+Versand ({{ order.shipping_method_name }}): €{{ "%.2f"|format(order.shipping_cost) }}
+Gesamt: €{{ "%.2f"|format(order.total) }}
+
+Lieferadresse:
+{{ order.shipping_name }}
+{{ order.shipping_street }}
+{{ order.shipping_zip }} {{ order.shipping_city }}, {{ order.shipping_country }}
+
+VAINEA - wearyourstateofmind.de
