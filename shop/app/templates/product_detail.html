@@ -1,72 +1,141 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as ico %}
+{% block body_attrs %} class="has-pdp"{% endblock %}
 {% block extra_head %}
 <script type="application/ld+json">{{ product_json_ld | safe }}</script>
+<script src="/static/js/pdp.js" defer></script>
 {% endblock %}
 {% block content %}
-<section class="section pdp" style="--accent: {{ product.state.hex_color }}">
-  <div class="wrap pdp-grid">
-    <div class="pdp-gallery">
-      {% for img in product.images %}
-      <img src="{{ img.url }}" alt="{{ img.alt_text or product.name }}">
-      {% else %}
-      <p>Kein Bild hinterlegt.</p>
-      {% endfor %}
-    </div>
-    <div class="pdp-info">
-      <p class="eyebrow">{{ product.category }}</p>
-      <h1 class="h-editorial">{{ product.name }}</h1>
-      <p class="pdp-price">€{{ "%.2f"|format(product.price) }}</p>
+{#- Aufbau 1:1 aus pdpHtml() des Click-Dummys: Breadcrumb, pdp-grid aus
+    Galerie und Info-Spalte, pdp-story, Cross-Sell und die Sticky-Bar.
+    Die Galerie zeigt die real hinterlegten ProductImages statt der sieben
+    fixen GALLERY_SHOTS des Dummys. -#}
+{% set sizes = product.sizes | sort_sizes %}
+<div class="wrap">
+  <div class="breadcrumb">
+    <a class="crumb" href="/">Home</a>
+    <span class="sep">/</span>
+    <a class="crumb" href="/shop?category={{ product.category | urlencode }}">{{ product.category }}</a>
+    <span class="sep">/</span>
+    <span class="current">{{ product.name }}</span>
+  </div>
+</div>
 
-      {% if state_variants|length > 1 %}
-      <div class="pdp-swatches">
-        {% for variant in state_variants %}
-        <a href="/products/{{ variant.slug }}"
-           class="swatch-btn {% if variant.id == product.id %}is-selected{% endif %}"
-           style="background: {{ variant.state.hex_color }}"
-           aria-label="{{ variant.state.name }}"></a>
-        {% endfor %}
-      </div>
-      {% endif %}
-
-      <form id="add-to-cart-form" hx-post="/cart/items" hx-target="#cart-toast" hx-swap="innerHTML">
-        <div class="pdp-sizes">
-          {% for size in product.sizes %}
-          <label class="size-option {% if size.stock == 0 %}is-disabled{% endif %}">
-            <input type="radio" name="product_size_id" value="{{ size.id }}"
-                   {% if size.stock == 0 %}disabled{% endif %}
-                   {% if loop.first and size.stock > 0 %}checked{% endif %}>
-            {{ size.size }}
-          </label>
+<section class="section section--tight">
+  <div class="wrap">
+    <div class="pdp-grid">
+      <div class="pdp-gallery">
+        <div class="pdp-thumbs">
+          {% for img in product.images %}
+          <button type="button" class="pdp-thumb{% if loop.first %} is-active{% endif %}" data-pdp-thumb="{{ loop.index0 }}">
+            <img src="{{ img.url }}" alt="{{ img.alt_text or product.name }}">
+            <span class="pdp-thumb-label">{{ loop.index }}</span>
+          </button>
+          {% else %}
+          <button type="button" class="pdp-thumb is-active" data-pdp-thumb="0">
+            <span style="color:var(--ink-30)">{{ ico.category_icon(product.category, 24) }}</span>
+            <span class="pdp-thumb-label">{{ product.category }}</span>
+          </button>
           {% endfor %}
         </div>
-      </form>
+        <div class="pdp-main-img" style="background:linear-gradient(150deg, {{ product.state.hex_color }}26, var(--vanilla))">
+          {% for img in product.images %}
+          <img src="{{ img.url }}" alt="{{ img.alt_text or product.name }}" data-pdp-shot="{{ loop.index0 }}"{% if not loop.first %} hidden{% endif %}>
+          {% else %}
+          <span style="color:var(--ink-30)">{{ ico.category_icon(product.category, 90) }}</span>
+          {% endfor %}
+          <span class="pdp-main-caption">{{ product.material }}</span>
+        </div>
+      </div>
 
-      <div class="pdp-actions">
-        <button class="btn" type="submit" form="add-to-cart-form" style="--accent: {{ product.state.hex_color }}">In den Warenkorb</button>
-        {% if current_user %}
-          {% if is_wishlisted %}
-          <form method="post" action="/account/wishlist/{{ product.id }}/remove" class="inline-form">
-            <button type="submit" class="btn btn--ghost wish-toggle is-active" aria-label="Von Wishlist entfernen">♥</button>
+      <div class="pdp-info" style="--accent: {{ product.state.hex_color }}">
+        <div class="pdp-state-label" style="color: {{ product.state.hex_color }}">
+          <span class="fc-dot" style="background: {{ product.state.hex_color }}"></span>{{ product.state.name }}
+        </div>
+        <h1 class="pdp-title">{{ product.name }}</h1>
+        <p class="pdp-mood">{{ product.state.mood_text }} — „{{ product.state.brand_line }}“</p>
+        <div class="pdp-price">€{{ "%.0f"|format(product.price) }}</div>
+
+        <form id="add-to-cart-form" class="pdp-select-block" hx-post="/cart/items" hx-target="#cart-toast" hx-swap="innerHTML">
+          {% if state_variants | length > 1 %}
+          <span class="qa-label">Color</span>
+          <div class="qa-row">
+            {% for variant in state_variants | sort(attribute="state.sort_order") %}
+            {% if variant.id == product.id %}
+            <span class="swatch-btn is-selected" style="background: {{ variant.state.hex_color }}" aria-label="{{ variant.state.name }}"></span>
+            {% else %}
+            <a class="swatch-btn" href="/products/{{ variant.slug }}" style="background: {{ variant.state.hex_color }}"
+               aria-label="In {{ variant.state.name }} ansehen"></a>
+            {% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <span class="qa-label">Size</span>
+          <div class="qa-row">
+            {% for size in sizes %}
+            <label class="size-chip{% if size.stock <= 0 %} is-soldout{% endif %}">
+              <input type="radio" name="product_size_id" value="{{ size.id }}"
+                     {% if size.stock <= 0 %}disabled{% endif %}
+                     {% if loop.first and size.stock > 0 %}checked{% endif %}>{{ size.size }}
+            </label>
+            {% endfor %}
+          </div>
+        </form>
+
+        <div class="pdp-actions">
+          <button class="btn" type="submit" form="add-to-cart-form">Add to Bag — €{{ "%.0f"|format(product.price) }}</button>
+          {% if current_user %}
+          <form method="post" action="/account/wishlist/{{ product.id }}{% if is_wishlisted %}/remove{% endif %}">
+            <button type="submit" class="pdp-wish-btn{% if is_wishlisted %} is-active{% endif %}"
+                    aria-label="{% if is_wishlisted %}Aus My States entfernen{% else %}Save to My States{% endif %}">{{ ico.icon("heart", 20) }}</button>
           </form>
           {% else %}
-          <form method="post" action="/account/wishlist/{{ product.id }}" class="inline-form">
-            <button type="submit" class="btn btn--ghost wish-toggle" aria-label="Zur Wishlist hinzufügen">♡</button>
-          </form>
+          <a class="pdp-wish-btn" href="/account/login?next=/products/{{ product.slug }}"
+             aria-label="Save to My States (Login erforderlich)">{{ ico.icon("heart", 20) }}</a>
           {% endif %}
-        {% else %}
-        <a href="/account/login?next=/products/{{ product.slug }}" class="btn btn--ghost wish-toggle" aria-label="Zur Wishlist hinzufügen (Login erforderlich)">♡</a>
-        {% endif %}
+        </div>
+
+        <div class="accordion">
+          {% for key, body in accordion %}
+          <details class="accordion-item"{% if loop.first %} open{% endif %}>
+            <summary class="accordion-head">{{ key }}<span class="acc-plus">{{ ico.icon("close", 13) }}</span></summary>
+            <div class="accordion-body"><div class="accordion-body-inner">{{ body }}</div></div>
+          </details>
+          {% endfor %}
+        </div>
       </div>
-      <div id="cart-toast"></div>
-
-      {% if product.description %}
-      <p class="pdp-description">{{ product.description }}</p>
-      {% endif %}
-
-      <dl class="pdp-meta">
-        <dt>Material</dt><dd>{{ product.material }}</dd>
-      </dl>
     </div>
   </div>
 </section>
+
+<section class="section section--tight">
+  <div class="wrap">
+    <div class="pdp-story" style="--accent: {{ product.state.hex_color }}">
+      <div>
+        <div class="pdp-story-eyebrow" style="color: {{ product.state.hex_color }}">This is {{ product.state.name }}.</div>
+        <h3>{{ product.state.brand_line }}</h3>
+        <p>{{ product.state.story_text }}</p>
+        <a class="btn" style="margin-top:22px" href="/states/{{ product.state.slug }}">Shop all {{ product.state.name }}</a>
+      </div>
+      <img src="{{ product.state.hero_image_url }}" alt="{{ product.state.name }} mood" loading="lazy">
+    </div>
+  </div>
+</section>
+
+{% if cross_sell %}
+<section class="section pdp-cross">
+  <div class="wrap">
+    <div class="section-head"><div><div class="eyebrow">{{ product.state.mood_text }}</div><h2>COMPLETE YOUR STATE.</h2></div></div>
+    <div class="product-grid">
+      {% for p in cross_sell %}{% include "partials/product_card.html" %}{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<div class="pdp-sticky-bar" id="pdpStickyBar">
+  <span class="psb-price">€{{ "%.0f"|format(product.price) }}</span>
+  <button class="btn" type="submit" form="add-to-cart-form">Add to Bag</button>
+</div>
 {% endblock %}

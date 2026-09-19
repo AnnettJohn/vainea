@@ -1,8 +1,8 @@
-<!doctype html>
+{% import "partials/icons.html" as ico %}<!doctype html>
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{{ page_title or "VAINEA" }}</title>
   <meta name="description" content="{{ page_description or 'WEAR YOUR STATE OF MIND — VAINEA D2C Resort- & Spa-Wear.' }}">
   {% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
@@ -11,27 +11,79 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/site.css">
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="/static/js/site.js" defer></script>
   {% block extra_head %}{% endblock %}
 </head>
-<body>
-  <header class="site-header">
-    <div class="wrap header-inner">
-      <a href="/" class="logo">VAINEA</a>
+<body{% block body_attrs %}{% endblock %}>
+  <header class="site-header" id="siteHeader">
+    <div class="wrap header-row">
+      <a class="logo" href="/" aria-label="VAINEA — zur Startseite">{{ ico.logo_mark() }}VAINEA</a>
+
       <nav class="nav-main">
-        <a href="/shop">Shop</a>
-        {% for s in nav_states %}<a href="/states/{{ s.slug }}">{{ s.name }}</a>{% endfor %}
+        <button type="button" data-menu-toggle="shop">Shop</button>
+        <button type="button" data-menu-toggle="states">States</button>
+        <a href="/shop">New In</a>
+        <a href="/shop">Bestseller</a>
         <a href="/story">Our Story</a>
       </nav>
-      <div class="nav-icons">
-        {% if current_user %}
-        <a href="/account" aria-label="Mein Konto">Mein Konto</a>
-        <form method="post" action="/account/logout" class="inline-form">
-          <button type="submit" class="link-btn">Logout</button>
-        </form>
-        {% else %}
-        <a href="/account/login" aria-label="Login">Login</a>
-        {% endif %}
-        <a href="/cart" aria-label="Warenkorb" id="cart-count-badge">Cart{% if cart_count %} ({{ cart_count }}){% endif %}</a>
+
+      <div class="header-actions">
+        <div class="icon-btn-wrap desktop-only">
+          <a class="icon-btn" href="{{ '/account' if current_user else '/account/login' }}"
+             aria-label="{{ 'Mein Konto' if current_user else 'Login' }}">{{ ico.icon("account", 18) }}</a>
+        </div>
+        <div class="icon-btn-wrap desktop-only">
+          <a class="icon-btn" href="/account" aria-label="My States">
+            {{ ico.icon("heart", 18) }}{% if wishlist_ids %}<span class="cart-count">{{ wishlist_ids|length }}</span>{% endif %}
+          </a>
+        </div>
+        <div class="icon-btn-wrap">
+          <a class="icon-btn" href="/cart" aria-label="Bag" id="cart-count-badge">
+            {{ ico.icon("bag", 18) }}{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="megamenu" data-menu-panel="shop" hidden>
+      <div class="wrap megamenu-inner">
+        <div class="megamenu-col">
+          <h4>Shop</h4>
+          <ul>
+            <li><a href="/shop?category=Spa+Robe">Robes</a></li>
+            <li><a href="/shop?category=Spa+Robe">Spa Wear</a></li>
+            <li><a href="/shop">Resort Wear</a></li>
+            <li><a href="/shop?category=Spa+Bag">Bags</a></li>
+          </ul>
+        </div>
+        <div class="megamenu-col">
+          <h4>&nbsp;</h4>
+          <ul>
+            <li><a href="/shop?category=Towel">Towels</a></li>
+            <li><a href="/shop?category=Water+Bottle">Accessories</a></li>
+            <li><a href="/shop">All Products</a></li>
+          </ul>
+        </div>
+        <div class="megamenu-col">
+          <h4>Shop by State</h4>
+          <ul>
+            {% for s in nav_states %}
+            <li><a class="mm-state-chip" href="/states/{{ s.slug }}"><span class="mm-dot" style="background:{{ s.hex_color }}"></span>{{ s.name }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="megamenu" data-menu-panel="states" hidden>
+      <div class="wrap megamenu-inner">
+        {% for s in nav_states %}
+        <div class="megamenu-col mm-state-col" style="--accent: {{ s.hex_color }}">
+          <a class="mm-state-name" href="/states/{{ s.slug }}"><span class="mm-state-num">{{ s.num }}</span>{{ s.name }}</a>
+          <p class="mm-state-mood">{{ s.mood_text }}</p>
+          <a class="mm-state-btn" href="/states/{{ s.slug }}">Shop {{ s.name }} {{ ico.icon("arrowRight", 12) }}</a>
+        </div>
+        {% endfor %}
       </div>
     </div>
   </header>
@@ -40,16 +92,64 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="site-footer">
-    <div class="wrap footer-inner">
-      <p>&copy; 2026 VAINEA. Alle Rechte vorbehalten.</p>
-      <nav class="footer-legal">
-        <a href="/legal/impressum">Impressum</a>
-        <a href="/legal/datenschutz">Datenschutz</a>
-        <a href="/legal/agb">AGB</a>
-        <a href="/legal/widerruf">Widerrufsbelehrung</a>
-      </nav>
+  <footer class="footer">
+    <div class="wrap footer-grid">
+      <div>
+        <div class="logo" style="color:var(--soft-white)">{{ ico.logo_mark() }}VAINEA</div>
+        <p style="margin-top:16px;font-size:.85rem;color:rgba(251,250,247,.6);max-width:28ch">Wear your state of mind. Mediterranean resort, modern spa, fashion editorial.</p>
+        <div class="footer-social">
+          <a href="#" aria-label="VAINEA on Instagram">{{ ico.icon("instagram", 18) }}</a>
+          <a href="#" aria-label="VAINEA on Pinterest">{{ ico.icon("pinterest", 18) }}</a>
+        </div>
+      </div>
+      <div>
+        <h5>Shop</h5>
+        <ul>
+          <li><a href="/shop?category=Spa+Robe">Robes</a></li>
+          <li><a href="/shop?category=Spa+Bag">Bags</a></li>
+          <li><a href="/shop?category=Towel">Towels</a></li>
+          <li><a href="/shop?category=Water+Bottle">Accessories</a></li>
+          <li><a href="/shop">All Products</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>States</h5>
+        <ul>
+          {% for s in nav_states %}<li><a href="/states/{{ s.slug }}">{{ s.name }}</a></li>{% endfor %}
+        </ul>
+      </div>
+      <div>
+        <h5>Company</h5>
+        <ul>
+          <li><a href="/story">Our Story</a></li>
+          <li><a href="/account">Mein Konto</a></li>
+          <li><a href="/cart">Warenkorb</a></li>
+        </ul>
+      </div>
+      <div>
+        <h5>Rechtliches</h5>
+        <ul>
+          <li><a href="/legal/impressum">Impressum</a></li>
+          <li><a href="/legal/datenschutz">Datenschutz</a></li>
+          <li><a href="/legal/agb">AGB</a></li>
+          <li><a href="/legal/widerruf">Widerrufsbelehrung</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="wrap footer-bottom">
+      <span>&copy; 2026 VAINEA. Alle Rechte vorbehalten.</span>
+      <span>Wear your state of mind.</span>
     </div>
   </footer>
+
+  <div id="cart-toast"></div>
+
+  <nav class="mobile-nav">
+    <a href="/shop">{{ ico.icon("bag2", 20) }}Shop</a>
+    <a href="/#states">{{ ico.icon("arrowRight", 20) }}States</a>
+    <a href="/">{{ ico.icon("account", 20) }}Home</a>
+    <a href="/account">{{ ico.icon("heart", 20) }}Wishlist{% if wishlist_ids %}<span class="cart-count" style="top:-2px;right:6px">{{ wishlist_ids|length }}</span>{% endif %}</a>
+    <a href="/cart">{{ ico.icon("bag", 20) }}Bag{% if cart_count %}<span class="cart-count" style="top:-2px;right:6px">{{ cart_count }}</span>{% endif %}</a>
+  </nav>
 </body>
 </html>

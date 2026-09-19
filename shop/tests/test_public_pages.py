@@ -32,8 +32,10 @@ async def test_product_detail_page(client):
     response = await client.get("/products/sun-mono-robe")
     assert response.status_code == 200
     assert "Sun Mono Robe" in response.text
-    # Alle vier State-Varianten der Mono-Robe-Gruppe müssen als Swatches da sein
-    assert response.text.count("swatch-btn") == 4
+    # Alle vier State-Varianten der Mono-Robe-Gruppe müssen als Swatches da sein.
+    # Nur der Auswahlblock der PDP zählt - Cross-Sell-Karten bringen eigene mit.
+    select_block = response.text.split('id="add-to-cart-form"', 1)[1].split("</form>", 1)[0]
+    assert select_block.count("swatch-btn") == 4
 
 
 async def test_product_detail_404_for_unknown_slug(client):

@@ -20,7 +20,7 @@ async def test_add_to_cart_sets_cookie_and_shows_toast(client, db_session):
 
     assert response.status_code == 200
     assert "in den Warenkorb gelegt" in response.text
-    assert "Cart (2)" in response.text
+    assert '<span class="cart-count">2</span>' in response.text  # OOB-Swap des Bag-Badges
     assert client.cookies.get("vainea_cart") is not None
 
 
@@ -67,7 +67,7 @@ async def test_add_more_than_stock_is_clamped(client, db_session):
     response = await client.post("/cart/items", data={"product_size_id": size_id, "quantity": "9999"})
 
     assert response.status_code == 200
-    assert "Cart (25)" in response.text  # Seed-Platzhalterbestand ist 25
+    assert '<span class="cart-count">25</span>' in response.text  # Seed-Platzhalterbestand ist 25
 
 
 async def test_add_unknown_size_is_rejected(client):

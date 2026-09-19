@@ -1,32 +1,46 @@
+{% import "partials/icons.html" as ico %}
+{#- Der Dummy hatte statt einer Warenkorbseite einen Drawer; Markup und
+    Klassen (cart-line, qty-stepper, remove-link, subtotal-row) sind von
+    dort übernommen. -#}
 {% if not cart or not cart.items %}
-<p>Dein Warenkorb ist leer. <a href="/shop">Weiter shoppen</a></p>
+<div class="empty-state">
+  <p>Dein Warenkorb ist leer.</p>
+  <a class="btn" style="margin-top:20px" href="/shop">Weiter shoppen {{ ico.icon("arrowRight", 14) }}</a>
+</div>
 {% else %}
-<ul class="cart-lines">
+<ul>
   {% for item in cart.items %}
   <li class="cart-line">
-    {% if item.product.images %}
-    <img src="{{ item.product.images[0].url }}" alt="{{ item.product.name }}">
-    {% endif %}
-    <div class="cart-line-info">
-      <p class="cart-line-name">{{ item.product.name }}</p>
-      <p class="cart-line-size">Größe: {{ item.product_size.size }}</p>
-      <div class="cart-line-actions">
-        <form hx-post="/cart/items/{{ item.id }}/quantity" hx-target="#cart-body" hx-swap="innerHTML">
-          <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product_size.stock }}">
-          <button type="submit" class="btn btn--ghost">Aktualisieren</button>
-        </form>
-        <form hx-post="/cart/items/{{ item.id }}/remove" hx-target="#cart-body" hx-swap="innerHTML">
-          <button type="submit" class="link-btn">Entfernen</button>
-        </form>
-      </div>
+    <div class="cart-line-media">
+      {% if item.product.images %}
+      <img src="{{ item.product.images[0].url }}" alt="{{ item.product.name }}">
+      {% else %}
+      {{ ico.category_icon(item.product.category, 30) }}
+      {% endif %}
     </div>
-    <p class="cart-line-price">€{{ "%.2f"|format(item.product.price * item.quantity) }}</p>
+    <div class="cart-line-body">
+      <div class="cart-line-top">
+        <span class="cart-line-name">{{ item.product.name }}</span>
+        <span class="cart-line-price">€{{ "%.2f"|format(item.product.price * item.quantity) }}</span>
+      </div>
+      <span class="cart-line-size">{{ item.product.state.name }} · Größe {{ item.product_size.size }}</span>
+      <form class="qty-stepper" hx-post="/cart/items/{{ item.id }}/quantity" hx-target="#cart-body" hx-swap="innerHTML">
+        <button type="submit" name="quantity" value="{{ item.quantity - 1 }}"
+                aria-label="Menge verringern"{% if item.quantity <= 1 %} disabled{% endif %}>−</button>
+        <span>{{ item.quantity }}</span>
+        <button type="submit" name="quantity" value="{{ item.quantity + 1 }}"
+                aria-label="Menge erhöhen"{% if item.quantity >= item.product_size.stock %} disabled{% endif %}>+</button>
+      </form>
+      <form hx-post="/cart/items/{{ item.id }}/remove" hx-target="#cart-body" hx-swap="innerHTML">
+        <button type="submit" class="remove-link">Entfernen</button>
+      </form>
+    </div>
   </li>
   {% endfor %}
 </ul>
 <div class="cart-summary">
-  <p class="cart-subtotal">Zwischensumme: <strong>€{{ "%.2f"|format(subtotal) }}</strong></p>
+  <div class="subtotal-row"><span>Zwischensumme</span><span>€{{ "%.2f"|format(subtotal) }}</span></div>
   <p class="cart-note">Versand und eventuelle Rabatte werden im nächsten Schritt berechnet.</p>
-  <a class="btn" href="/checkout/address">Zur Kasse</a>
+  <a class="btn" href="/checkout/address">Zur Kasse {{ ico.icon("arrowRight", 14) }}</a>
 </div>
 {% endif %}

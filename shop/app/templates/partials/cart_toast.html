@@ -1,2 +1,7 @@
-<div id="cart-toast" class="toast">{{ message }}</div>
-<a href="/cart" aria-label="Warenkorb" id="cart-count-badge" hx-swap-oob="true">Cart{% if cart_count %} ({{ cart_count }}){% endif %}</a>
+{% import "partials/icons.html" as ico %}
+<div class="toast">{{ message }}</div>
+{#- Out-of-band-Swap: aktualisiert das Bag-Badge im Header, wie es der
+    Click-Dummy beim Re-Render tat. -#}
+<a class="icon-btn" href="/cart" aria-label="Bag" id="cart-count-badge" hx-swap-oob="true">
+  {{ ico.icon("bag", 18) }}{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}
+</a>

@@ -1,23 +1,52 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as ico %}
 {% block content %}
-<section class="section">
-  <div class="wrap">
-    <h1 class="h-editorial">Shop</h1>
+{#- Aufbau 1:1 aus categoryPageHtml() des Click-Dummys: Breadcrumb,
+    category-intro-Banner, toolbar-row und cat-grid. Gefiltert wird - wie im
+    Pflichtenheft festgelegt - nach Kategorie, State und Material; die im
+    Dummy zusaetzlich skizzierten Groessen-/Preis-Filter und die Sortierung
+    sind dort nicht vorgesehen. -#}
+<div class="wrap">
+  <div class="breadcrumb">
+    <a class="crumb" href="/">Home</a>
+    <span class="sep">/</span>
+    <span class="current">{{ category_label }}</span>
+  </div>
+</div>
 
-    <form class="shop-filters"
-          hx-get="/shop" hx-target="#product-grid" hx-push-url="true" hx-trigger="change">
-      <select name="state">
-        <option value="">Alle States</option>
-        {% for s in nav_states %}
-        <option value="{{ s.slug }}" {% if active_state == s.slug %}selected{% endif %}>{{ s.name }}</option>
-        {% endfor %}
-      </select>
-      <select name="material">
-        <option value="">Alle Materialien</option>
-        {% for m in ["Frottee", "Canvas", "Edelstahl"] %}
-        <option value="{{ m }}" {% if active_material == m %}selected{% endif %}>{{ m }}</option>
-        {% endfor %}
-      </select>
+<section class="section section--tight">
+  <div class="wrap">
+    <div class="category-intro">
+      <img src="{{ banner_image_url }}" alt="{{ category_label }}">
+      <div class="ci-scrim"></div>
+      <div class="ci-body">
+        <div class="ci-eyebrow">Shop</div>
+        <h1>{{ category_headline }}</h1>
+      </div>
+    </div>
+
+    <form class="toolbar-row" hx-get="/shop" hx-target="#product-grid" hx-push-url="true" hx-trigger="change">
+      <div class="toolbar-left">
+        {% if active_category %}<input type="hidden" name="category" value="{{ active_category }}">{% endif %}
+        <select class="sort-select" name="state" aria-label="State">
+          <option value="">Alle States</option>
+          {% for s in nav_states %}
+          <option value="{{ s.slug }}" {% if active_state == s.slug %}selected{% endif %}>{{ s.name }}</option>
+          {% endfor %}
+        </select>
+        <select class="sort-select" name="material" aria-label="Material">
+          <option value="">Alle Materialien</option>
+          {% for m in materials %}
+          <option value="{{ m }}" {% if active_material == m %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+        <span class="toolbar-count">{{ products | length }} piece{{ "" if products | length == 1 else "s" }}</span>
+      </div>
+      {% if active_state or active_material %}
+      <a class="toolbar-btn" href="/shop{% if active_category %}?category={{ active_category | urlencode }}{% endif %}">
+        Filter zurücksetzen {{ ico.icon("close", 11) }}
+      </a>
+      {% endif %}
     </form>
 
     <div id="product-grid">
