@@ -210,17 +210,18 @@ async def seed_products(session, states_by_slug: dict[str, State]) -> None:
             )
 
 
-# Platzhalter-Versandzonen/-tarife, wie im Pflichtenheft als Beispiel
-# genannt (Deutschland/EU/Rest der Welt) - Werte sind Annahmen, bis
-# konkrete Zonen/Tarife feststehen, und lassen sich im Admin unter
-# /admin/shipping-zone jederzeit anpassen. Die Freigrenze für Deutschland
-# übernimmt den bereits im Dummy kommunizierten Wert ("Free shipping on
-# orders over €120").
-EU_COUNTRY_CODES = [
-    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "GR", "HU",
-    "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE",
-]
-
+# VAINEA liefert aktuell ausschließlich in die DACH-Region (Entscheidung vom
+# 19.09.2026). Es gibt bewusst KEINE Auffangzone mit leerer country_codes-Liste
+# mehr: sonst nimmt der Checkout jedes Land an, statt die Bestellung abzulehnen.
+#
+# Die Schweiz ist eine eigene Zone, weil sie außerhalb des EU-Zoll- und
+# Mehrwertsteuergebiets liegt - eine Lieferung dorthin ist eine Ausfuhr, bei der
+# Zoll und Einfuhrsteuer beim Empfänger anfallen. Die umsatzsteuerliche
+# Behandlung (Ausfuhrlieferung, mögliche CH-Steuerpflicht ab CHF 100.000
+# Versandumsatz) ist noch mit der Steuerberatung zu klären.
+#
+# Die Beträge sind Platzhalter, bis die echten Tarife feststehen; sie werden
+# danach unter /admin gepflegt, nicht hier im Code.
 SHIPPING_ZONES = [
     {
         "name": "Deutschland",
@@ -229,16 +230,16 @@ SHIPPING_ZONES = [
         "rates": [{"method_name": "Standard", "price": "4.95"}],
     },
     {
-        "name": "EU",
-        "country_codes": EU_COUNTRY_CODES,
+        "name": "Österreich",
+        "country_codes": ["AT"],
         "free_shipping_threshold": "150.00",
         "rates": [{"method_name": "Standard", "price": "9.95"}],
     },
     {
-        "name": "Rest der Welt",
-        "country_codes": [],  # leere Liste = Fallback-Zone, siehe app/core/checkout.py
+        "name": "Schweiz",
+        "country_codes": ["CH"],
         "free_shipping_threshold": None,
-        "rates": [{"method_name": "Standard International", "price": "19.95"}],
+        "rates": [{"method_name": "Standard", "price": "14.95"}],
     },
 ]
 

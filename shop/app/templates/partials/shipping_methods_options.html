@@ -1,5 +1,5 @@
 {% if not zone or not zone.rates %}
-<p class="form-hint">Keine Versandoption für dieses Land verfügbar.</p>
+<p class="form-hint">Wir versenden aktuell nur nach Deutschland, Österreich und in die Schweiz.</p>
 {% else %}
 {% for rate in zone.rates|sort(attribute='price') %}
 {% set cost = shipping_cost_for(zone, rate, subtotal) %}
@@ -8,4 +8,9 @@
   {{ rate.method_name }} — {% if cost == 0 %}kostenlos{% else %}€{{ "%.2f"|format(cost) }}{% endif %}
 </label>
 {% endfor %}
+{% if is_non_eu %}
+{#- Pflichthinweis bei Ausfuhr: die Schweiz liegt außerhalb des EU-Zoll- und
+    Mehrwertsteuergebiets, Zoll und Einfuhrsteuer trägt die empfangende Person. -#}
+<p class="form-hint">Lieferungen in die Schweiz sind Ausfuhrlieferungen. Zoll, Einfuhrumsatzsteuer und Verzollungsgebühren werden bei der Einfuhr fällig und sind nicht im Preis enthalten.</p>
+{% endif %}
 {% endif %}
