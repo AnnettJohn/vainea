@@ -76,11 +76,12 @@ python -m pytest
 Startet für die Dauer des Testlaufs automatisch eine eigene, ephemere
 Postgres-Instanz und einen echten lokalen SMTP-Server (kein laufender
 Server/Docker nötig) und legt darin States/Produkte/Versandzonen wie im
-Seed-Skript an. 44 Tests decken die zentralen Flows ab: Warenkorb, Checkout
+Seed-Skript an. 49 Tests decken die zentralen Flows ab: Warenkorb, Checkout
 (inkl. Versandzonen-Fallback, Bestandsreservierung mit Race-Condition-Fall,
 Rabattcodes, Webhook-Idempotenz), Bestellbestätigungsmail (inkl. Ausfall-
 sicherheit bei SMTP-Fehlern), Login/Registrierung/Wishlist,
-SQLAdmin-Zugriffsschutz sowie Sitemap/Schema.org-Markup.
+SQLAdmin-Zugriffsschutz, Objektspeicher-Upload/URL-Migration (gegen einen
+von `moto` gemockten S3-Bucket) sowie Sitemap/Schema.org-Markup.
 
 Läuft bei jedem Push/PR automatisch über [GitHub Actions](../.github/workflows/ci.yml)
 (Lint + Tests, siehe Badge oben).
@@ -111,10 +112,30 @@ Pflichtenheft vorgesehen) und kann später auf eine eigene Subdomain
 umziehen, ohne dass sich am Datenmodell etwas ändert - dafür ist im
 `Caddyfile` bereits ein auskommentierter Beispielblock hinterlegt.
 
-**Bewusst noch nicht umgesetzt** (nicht Teil dieses Schritts): Produktbilder
-in Objektspeicher statt im Image selbst (Pflichtenheft nennt das explizit
-als Produktionsanforderung) - aktuell werden `app/static/images` einfach mit
-ins Docker-Image gebaut.
+### Produktbilder in den Objektspeicher migrieren
+
+Einmalig nach dem ersten Deployment (oder immer, wenn neue Bilder lokal
+unter `app/static/images` liegen, die noch nicht migriert wurden):
+
+1. Bucket im [Hetzner-Cloud-Console](https://console.hetzner.cloud/) anlegen,
+   auf **öffentlich** stellen und einen Access-Key erzeugen.
+2. `S3_*`-Variablen in `.env` eintragen (siehe `.env.example`).
+3. Migration laufen lassen:
+
+   ```bash
+   docker compose exec app python -m scripts.upload_images_to_storage
+   ```
+
+   Lädt alle Dateien aus `app/static/images` in den Bucket hoch und biegt
+   alle `State`/`ProductImage`-URLs, die noch auf `/static/images/...`
+   zeigen, auf die neue öffentliche Objektspeicher-URL um. Mehrfach
+   ausführbar (überschreibt Dateien, biegt nur noch lokale URLs um).
+
+Für neue Bilder danach: Datei über die Hetzner-Console (oder `s3cmd`/`rclone`)
+in den Bucket hochladen und die resultierende URL im Admin bei der
+jeweiligen `ProductImage`/`State` eintragen - es gibt (bewusst, siehe
+Pflichtenheft-Umfang von ~24 Produkten) kein eigenes Datei-Upload-Feld im
+Admin-Formular.
 
 **Ein beim Bauen dieser Config gefundener und behobener Fehler**: Ein naiver
 `pip install .`-Schritt im Dockerfile hätte ein Wheel des eigenen Pakets
@@ -162,6 +183,12 @@ vollständiger Checkout-Flow:
 
 Rechtstexte sind als Platzhalterseiten unter `/legal/*` verlinkt (Footer).
 
+**Objektspeicher für Produktbilder** (Hetzner Object Storage, S3-kompatibel):
+`scripts/upload_images_to_storage.py` migriert bestehende lokale Bilder
+einmalig in einen Bucket und schreibt die neuen URLs zurück in
+State/ProductImage. Lokal ohne konfigurierten Objektspeicher bleibt alles
+wie gehabt bei `app/static/images` - keine Pflicht für die Entwicklung.
+
 **SEO** (Pflichtenheft, nicht-funktionale Anforderungen): `/sitemap.xml`
 (States, aktive Produkte, statische Seiten, mit `lastmod`) und `/robots.txt`,
 Schema.org-`Product`-Markup (JSON-LD) auf jeder PDP, `<link rel="canonical">`
@@ -184,6 +211,7 @@ das Pflichtenheft-Datenmodell keine eigene Address-Entität vorsieht).
 Noch offen: Homepage-Content aus dem Dummy (Hero-Slider, Quiz,
 Instagram-Teaser, Newsletter-Formular), ein echter SMTP-Anbieter für
 Produktion (aktuell auf Mailhog/Mailpit-Defaults für lokale Entwicklung
-eingestellt), Produktbilder in Objektspeicher statt im Docker-Image (siehe
-Deployment-Abschnitt), sowie die endgültigen Inhalte für Rechtstexte und die
-finalen Versandzonen/-tarife (aktuell Platzhalter, siehe oben).
+eingestellt), ein Datei-Upload-Feld im Admin für neue Produktbilder (aktuell
+URL-Feld, Upload erfolgt separat über Hetzner-Console/CLI), sowie die
+endgültigen Inhalte für Rechtstexte und die finalen Versandzonen/-tarife
+(aktuell Platzhalter, siehe oben).
