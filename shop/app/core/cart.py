@@ -14,6 +14,7 @@ CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30
 
 _CART_OPTIONS = (
     selectinload(Cart.items).selectinload(CartItem.product).selectinload(Product.images),
+    selectinload(Cart.items).selectinload(CartItem.product).selectinload(Product.state),
     selectinload(Cart.items).selectinload(CartItem.product_size),
 )
 

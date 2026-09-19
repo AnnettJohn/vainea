@@ -14,7 +14,7 @@
   <script src="/static/js/site.js" defer></script>
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body{% block body_attrs %}{% endblock %}>
   <header class="site-header" id="siteHeader">
     <div class="wrap header-row">
       <a class="logo" href="/" aria-label="VAINEA — zur Startseite">{{ ico.logo_mark() }}VAINEA</a>

@@ -1,8 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="section">
-  <div class="wrap">
-    <h1 class="h-editorial">Warenkorb</h1>
+<div class="wrap">
+  <div class="breadcrumb">
+    <a class="crumb" href="/">Home</a>
+    <span class="sep">/</span>
+    <span class="current">Your Bag</span>
+  </div>
+</div>
+
+<section class="section section--tight">
+  <div class="wrap cart-page">
+    <div class="section-head"><div><div class="eyebrow">Your Bag</div><h2>WARENKORB</h2></div></div>
     <div id="cart-body">
       {% include "partials/cart_body.html" %}
     </div>

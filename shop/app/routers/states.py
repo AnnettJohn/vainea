@@ -13,6 +13,11 @@ from app.models.state import State
 
 router = APIRouter(prefix="/states")
 
+# articlesForState()/piecesForState() des Click-Dummys: "The Edit" zeigt die
+# Robes nach Schnitt-Variante, "State Pieces" die Accessoires in fester Folge.
+VARIANT_ORDER = ["mono", "block", "stripe"]
+PIECE_CATEGORY_ORDER = ["Towel", "Water Bottle", "Spa Bag"]
+
 
 @router.get("/{slug}")
 async def state_detail(
@@ -27,9 +32,18 @@ async def state_detail(
         select(Product)
         .options(selectinload(Product.state), selectinload(Product.images), selectinload(Product.sizes))
         .where(Product.state_id == state.id, Product.status == ProductStatus.ACTIVE)
-        .order_by(Product.category)
+        .order_by(Product.name)
     )
     products = products_result.scalars().all()
+
+    articles = sorted(
+        (p for p in products if p.variant),
+        key=lambda p: VARIANT_ORDER.index(p.variant) if p.variant in VARIANT_ORDER else len(VARIANT_ORDER),
+    )
+    pieces = sorted(
+        (p for p in products if p.category in PIECE_CATEGORY_ORDER),
+        key=lambda p: PIECE_CATEGORY_ORDER.index(p.category),
+    )
 
     page_title, page_description = state_meta(state)
 
@@ -37,6 +51,8 @@ async def state_detail(
         **base_context,
         "state": state,
         "products": products,
+        "articles": articles,
+        "pieces": pieces,
         "siblings": await sibling_map(db, products),
         "page_title": page_title,
         "page_description": page_description,

@@ -1,7 +1,10 @@
-<div class="product-grid">
-  {% for p in products %}
-    {% include "partials/product_card.html" %}
-  {% else %}
-    <p>Keine Produkte gefunden.</p>
-  {% endfor %}
+{% if products %}
+<div class="{{ grid_class | default("cat-grid") }}">
+  {% for p in products %}{% include "partials/product_card.html" %}{% endfor %}
 </div>
+{% else %}
+<div class="empty-cat">
+  <div class="eyebrow">Coming soon</div>
+  <p style="margin-top:10px;font-family:var(--serif);font-style:italic;font-size:1.4rem">Hier gibt es noch keine Pieces — schau bald wieder vorbei oder entdecke einen anderen State.</p>
+</div>
+{% endif %}

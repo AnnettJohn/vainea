@@ -1,9 +1,80 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as ico %}
 {% block content %}
+{#- Inhalt und Aufbau 1:1 aus storyPageHtml() des Click-Dummys. -#}
+<div class="wrap">
+  <div class="breadcrumb">
+    <a class="crumb" href="/">Home</a>
+    <span class="sep">/</span>
+    <span class="current">Our Story</span>
+  </div>
+</div>
+
+<section class="story-hero" style="background-image:url('/static/images/hero-sea.jpg')">
+  <div class="story-hero-scrim"></div>
+  <div class="wrap story-hero-content">
+    <p class="story-hero-eyebrow">Our Story</p>
+    <h1 class="story-hero-headline">Es beginnt mit<br>einem Atemzug.</h1>
+    <p class="story-hero-sub">Dem ersten nach dem Sprung ins Wasser. Dem letzten vor dem Einschlafen. VAINEA ist die Geschichte dieser kleinen, stillen Übergänge — und der Wunsch, sie sichtbar zu machen.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap story-manifesto">
+    <span class="eyebrow">Warum wir das tun</span>
+    <p class="story-manifesto-text">VAINEA ist nicht am Reißbrett entstanden. Es ist an einem Nachmittag entstanden, an dem jemand nach dem Schwimmen im nassen Handtuch auf einer warmen Mauer saß und dachte: <em>„Genau dieses Gefühl — das will ich nicht vergessen.“</em></p>
+  </div>
+</section>
+
+<section class="section section--tight bg-vanilla">
+  <div class="wrap">
+    <div class="section-head"><div><div class="eyebrow">Vier Stimmungen, eine Haltung</div><h2>UNSERE STATES.</h2></div></div>
+    <div class="story-states-band">
+      {% for s in nav_states %}
+      <a class="story-state-cell" href="/states/{{ s.slug }}">
+        <span class="dot" style="background: {{ s.hex_color }}"></span>
+        <span class="name">{{ s.num }} {{ s.name }}</span>
+        <span class="line">{{ s.brand_line }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
 <section class="section">
   <div class="wrap">
-    <h1 class="h-editorial">Our Story</h1>
-    <p>Inhalt folgt.</p>
+    <div class="section-head"><div><div class="eyebrow">Was uns leitet</div><h2>DREI DINGE, DIE UNS WICHTIG SIND.</h2></div></div>
+    <div class="story-pillars">
+      {% for num, title, body in pillars %}
+      <div class="story-pillar">
+        <div class="story-pillar-num">{{ num }}</div>
+        <h3>{{ title }}</h3>
+        <p>{{ body }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap">
+    <div class="pdp-story">
+      <img src="/static/images/hero-dream.jpg" alt="Ein ruhiger Moment am Wasser" loading="lazy">
+      <div>
+        <p class="pdp-story-eyebrow">Ein persönliches Wort</p>
+        <h3>„Ich wollte etwas schaffen, das sich anfühlt wie der Moment, in dem man endlich durchatmet.“</h3>
+        <p>VAINEA hat für mich mit einem einzigen Sommer begonnen — mit salzigem Haar, warmer Haut und der Erkenntnis, dass Ruhe kein Luxus sein sollte, sondern ein Zustand, den man jederzeit anziehen kann. Jedes Piece, das wir machen, ist ein kleines Stück dieses Sommers.</p>
+        <p class="story-founder-sign">— Mira Voss, Gründerin von VAINEA</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="story-cta">
+  <div class="wrap">
+    <h2 class="h-editorial">Finde deinen State.</h2>
+    <p>Vier Stimmungen. Eine Haltung. Welche ist heute deine?</p>
+    <a class="btn" href="/#states">Zu den States {{ ico.icon("arrowRight", 14) }}</a>
   </div>
 </section>
 {% endblock %}

@@ -1,18 +1,56 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as ico %}
 {% block content %}
-<section class="section state-hero" style="--accent: {{ state.hex_color }}">
+{#- Aufbau 1:1 aus statePageHtml() des Click-Dummys: Breadcrumb,
+    state-intro-grid, "The Edit" (Robes nach Variante) und "State Pieces"
+    (Towel/Water Bottle/Spa Bag). -#}
+<div class="wrap">
+  <div class="breadcrumb">
+    <a class="crumb" href="/">Home</a>
+    <span class="sep">/</span>
+    <span class="current">{{ state.num }} {{ state.name }}</span>
+  </div>
+</div>
+
+<section class="section section--tight" style="--accent: {{ state.hex_color }}">
   <div class="wrap">
-    <p class="eyebrow">{{ state.num }} — {{ state.name }}</p>
-    <h1 class="h-editorial">{{ state.brand_line }}</h1>
-    <p>{{ state.mood_text }}</p>
-    <p class="state-story">{{ state.story_text }}</p>
+    <div class="state-intro-grid">
+      <div class="state-intro-media">
+        <img src="{{ state.hero_image_url }}" alt="{{ state.name }} — {{ state.mood_text }}">
+      </div>
+      <div class="state-intro-copy">
+        <div class="state-intro-glow">
+          <p class="eyebrow">{{ state.mood_text }}</p>
+          <div class="state-intro-stripe" style="background: {{ state.hex_color }}"></div>
+          <h1 class="state-intro-name"><span class="state-intro-num">{{ state.num }}</span> {{ state.name }}</h1>
+        </div>
+        <p class="state-intro-line">{{ state.brand_line }}</p>
+        <p class="state-intro-statement">{{ state.story_text }}</p>
+        <a class="btn" style="margin-top:32px" href="#stateArticles">Shop the Edit {{ ico.icon("arrowRight", 14) }}</a>
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="section">
+{% if articles %}
+<section class="section section--tight" id="stateArticles">
   <div class="wrap">
-    <h2 class="h-editorial">Shop {{ state.name }}</h2>
-    {% include "partials/product_grid.html" %}
+    <div class="section-head"><div><div class="eyebrow">The Edit</div><h2>{{ state.name }} — MONO, BLOCK &amp; STRIPE.</h2></div></div>
+    <div class="product-grid">
+      {% for p in articles %}{% include "partials/product_card.html" %}{% endfor %}
+    </div>
   </div>
 </section>
+{% endif %}
+
+{% if pieces %}
+<section class="section section--tight bg-vanilla">
+  <div class="wrap">
+    <div class="section-head"><div><div class="eyebrow">Complete the state</div><h2>STATE PIECES.</h2></div></div>
+    <div class="product-grid">
+      {% for p in pieces %}{% include "partials/product_card.html" %}{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
 {% endblock %}
