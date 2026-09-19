@@ -1,13 +1,74 @@
-<a class="product-card" href="/products/{{ p.slug }}" style="--accent: {{ p.state.hex_color }}">
-  {% if p.images %}
-  <img src="{{ p.images[0].url }}" alt="{{ p.images[0].alt_text or p.name }}" loading="lazy">
-  {% else %}
-  <div class="product-media-placeholder" aria-hidden="true"></div>
-  {% endif %}
-  <div class="product-card-body">
-    {% if p.is_new %}<span class="badge">Neu</span>{% endif %}
-    {% if p.is_bestseller %}<span class="badge">Bestseller</span>{% endif %}
-    <h3>{{ p.name }}</h3>
-    <p>€{{ "%.2f"|format(p.price) }}</p>
+{% import "partials/icons.html" as ico %}
+{#- Markup 1:1 aus productCardHtml() des Click-Dummys. Der Quick-Add-Panel des
+    Dummys (JS-State) ist hier ein <details> mit echtem Formular auf /cart/items,
+    die Wunschliste ein Formular auf /account/wishlist/... . -#}
+{% set sib = (siblings | default({})).get(p.product_group_id) or {} %}
+{% set card_sizes = p.sizes | sort_sizes %}
+{% set is_wished = p.id in (wishlist_ids | default([])) %}
+<div class="product-card" style="--accent: {{ p.state.hex_color }}">
+  <div class="product-media{% if p.variant and p.variant != 'mono' %} product-media--{{ p.variant }}{% endif %}">
+    <span class="badge-state"><span class="badge-dot"></span>{{ p.state.name }}</span>
+    <form class="wish-form" method="post"
+          action="/account/wishlist/{{ p.id }}{% if is_wished %}/remove{% endif %}">
+      <button class="wish-btn{% if is_wished %} is-active{% endif %}" type="submit"
+              aria-label="{% if is_wished %}Aus My States entfernen{% else %}Save to My States{% endif %}">{{ ico.icon("heart", 17) }}</button>
+    </form>
+    <a class="product-media-visual" href="/products/{{ p.slug }}" aria-label="{{ p.name }} ansehen">
+      {% if p.images %}
+      <img class="product-media-photo" src="{{ p.images[0].url }}" alt="{{ p.images[0].alt_text or p.name }}" loading="lazy">
+      {% else %}
+      {{ ico.category_icon(p.category, 64) }}
+      {% endif %}
+    </a>
+    {% if card_sizes %}
+    <details class="quickadd">
+      <summary class="quickadd-trigger"><span class="btn">Quick Add</span></summary>
+      <form class="quickadd-panel" style="--accent: {{ p.state.hex_color }}"
+            hx-post="/cart/items" hx-target="#cart-toast" hx-swap="innerHTML">
+        <span class="qa-label">Color</span>
+        <div class="qa-row">
+          {% for s in nav_states %}
+          {% if s.slug == p.state.slug %}
+          <span class="swatch-btn is-selected" style="background: {{ s.hex_color }}" aria-label="{{ s.name }}"></span>
+          {% elif sib.get(s.slug) %}
+          <a class="swatch-btn" href="/products/{{ sib[s.slug] }}" style="background: {{ s.hex_color }}" aria-label="In {{ s.name }} ansehen"></a>
+          {% else %}
+          <span class="swatch-btn is-muted" style="background: {{ s.hex_color }}" aria-hidden="true"></span>
+          {% endif %}
+          {% endfor %}
+        </div>
+        <span class="qa-label">Size</span>
+        <div class="qa-row">
+          {% for s in card_sizes %}
+          <label class="size-chip{% if s.stock <= 0 %} is-soldout{% endif %}">
+            <input type="radio" name="product_size_id" value="{{ s.id }}"
+                   {% if loop.first %}checked{% endif %}{% if s.stock <= 0 %} disabled{% endif %}>{{ s.size }}
+          </label>
+          {% endfor %}
+        </div>
+        <button class="btn" style="width:100%;justify-content:center" type="submit">Add to Bag — €{{ "%.0f"|format(p.price) }}</button>
+      </form>
+    </details>
+    {% endif %}
   </div>
-</a>
+  <div class="product-info">
+    <a class="product-info-link" href="/products/{{ p.slug }}">
+      <div class="product-name-row">
+        <span class="product-name">{{ p.name }}</span>
+        <span class="product-price">€{{ "%.0f"|format(p.price) }}</span>
+      </div>
+      <span class="product-cat">{{ p.category }} · {{ card_sizes | length }} sizes</span>
+    </a>
+    <div class="swatch-row">
+      {% for s in nav_states %}
+      {% if s.slug == p.state.slug %}
+      <span class="swatch is-current" style="background: {{ s.hex_color }}" aria-label="{{ s.name }}"></span>
+      {% elif sib.get(s.slug) %}
+      <a class="swatch" href="/products/{{ sib[s.slug] }}" style="background: {{ s.hex_color }}" aria-label="In {{ s.name }} ansehen"></a>
+      {% else %}
+      <span class="swatch" style="background: {{ s.hex_color }};opacity:.3" aria-hidden="true"></span>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>

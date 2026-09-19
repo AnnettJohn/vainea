@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.catalog import sibling_map
 from app.core.context import get_base_context
 from app.core.templates import templates
 from app.db.session import get_db
@@ -47,7 +48,11 @@ QUIZ_MOODS = [
     ("BRIGHT", "light"),
 ]
 
-_PRODUCT_OPTIONS = (selectinload(Product.images), selectinload(Product.state))
+_PRODUCT_OPTIONS = (
+    selectinload(Product.images),
+    selectinload(Product.state),
+    selectinload(Product.sizes),
+)
 
 
 async def _products_by_slugs(db: AsyncSession, slugs: list[str]) -> dict[str, Product]:
@@ -89,6 +94,7 @@ async def home(request: Request, db: AsyncSession = Depends(get_db), base_contex
         quiz_products_by_state[state.slug] = result.scalars().all()
 
     states_by_slug = {s.slug: s for s in states}
+    siblings = await sibling_map(db, [*featured_products, *accessory_products])
 
     context = {
         **base_context,
@@ -101,6 +107,7 @@ async def home(request: Request, db: AsyncSession = Depends(get_db), base_contex
         "detail_tiles": DETAIL_TILES,
         "quiz_moods": QUIZ_MOODS,
         "quiz_products_by_state": quiz_products_by_state,
+        "siblings": siblings,
         "page_title": "VAINEA — Wear Your State of Mind",
     }
     return templates.TemplateResponse(request, "home.html", context)

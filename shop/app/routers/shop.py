@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.catalog import sibling_map
 from app.core.context import get_base_context
 from app.core.templates import templates
 from app.db.session import get_db
@@ -29,7 +30,7 @@ async def shop_index(
     """
     query = (
         select(Product)
-        .options(selectinload(Product.state), selectinload(Product.images))
+        .options(selectinload(Product.state), selectinload(Product.images), selectinload(Product.sizes))
         .where(Product.status == ProductStatus.ACTIVE)
     )
     if category:
@@ -47,6 +48,7 @@ async def shop_index(
     context = {
         **base_context,
         "products": products,
+        "siblings": await sibling_map(db, products),
         "active_category": category,
         "active_state": state,
         "active_material": material,

@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.catalog import sibling_map
 from app.core.context import get_base_context
 from app.core.seo import state_meta
 from app.core.templates import templates
@@ -24,7 +25,7 @@ async def state_detail(
 
     products_result = await db.execute(
         select(Product)
-        .options(selectinload(Product.state), selectinload(Product.images))
+        .options(selectinload(Product.state), selectinload(Product.images), selectinload(Product.sizes))
         .where(Product.state_id == state.id, Product.status == ProductStatus.ACTIVE)
         .order_by(Product.category)
     )
@@ -36,6 +37,7 @@ async def state_detail(
         **base_context,
         "state": state,
         "products": products,
+        "siblings": await sibling_map(db, products),
         "page_title": page_title,
         "page_description": page_description,
         "canonical_url": str(request.url_for("state_detail", slug=state.slug)),

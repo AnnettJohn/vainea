@@ -1,0 +1,34 @@
+{# SVG-Icons 1:1 aus dem Click-Dummy (ICON_PATHS in index.html). #}
+{%- macro icon(name, size=20) -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+{%- if name == "search" -%}<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.2" y2="16.2"/>
+{%- elif name == "account" -%}<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.6-4 4.4-6 7.5-6s5.9 2 7.5 6"/>
+{%- elif name == "heart" -%}<path d="M12 20.2s-7.9-4.6-10.1-9.4C.4 7.4 2 4.3 5.2 3.7c2.1-.4 4 .6 5.2 2.4 1.2-1.8 3.1-2.8 5.2-2.4 3.2.6 4.8 3.7 3.3 7.1-2.2 4.8-10.1 9.4-10.1 9.4-.5.3-1 .3-1.6 0"/>
+{%- elif name == "bag" -%}<path d="M6.5 8.5h11l1 12.5h-13z"/><path d="M9 8.5v-1a3 3 0 0 1 6 0v1"/>
+{%- elif name == "close" -%}<line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/>
+{%- elif name == "arrowRight" -%}<line x1="4" y1="12" x2="20" y2="12"/><polyline points="14,6 20,12 14,18"/>
+{%- elif name == "robe" -%}<path d="M9 3.2 12 5l3-1.8"/><path d="M8 5 5.5 20.5h13L16 5"/><line x1="12" y1="7" x2="12" y2="20"/><path d="M9.2 12.2c1.2.6 3.2 1.5 0 3.4"/>
+{%- elif name == "bag2" -%}<path d="M5 9h14l-1 11.5H6z"/><path d="M9 9V7a3 3 0 0 1 6 0v2"/>
+{%- elif name == "bottle" -%}<path d="M10 3h4v3.4c1.3.8 2 2 2 3.8v10a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-10c0-1.8.7-3 2-3.8z"/><line x1="8" y1="14" x2="16" y2="14"/>
+{%- elif name == "towel" -%}<rect x="4" y="4" width="16" height="16" rx="1.6"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="4" y1="15" x2="20" y2="15"/>
+{%- elif name == "instagram" -%}<rect x="3" y="3" width="18" height="18" rx="5.5"/><circle cx="12" cy="12" r="4.1"/><circle cx="17.3" cy="6.7" r="1" fill="currentColor" stroke="none"/>
+{%- elif name == "pinterest" -%}<circle cx="12" cy="12" r="9"/><path d="M9.6 20c.6-2.6 1.7-6.9 2.3-9.4"/><path d="M8.7 14.2c-.4-.8-.6-1.7-.6-2.6 0-3 2.4-5.5 5.6-5.5 3 0 5.3 2 5.3 4.8 0 3.1-1.8 5.6-4.3 5.6-1 0-1.9-.5-2.3-1.3"/>
+{%- endif -%}
+</svg>
+{%- endmacro -%}
+
+{# Kategorie -> Icon-Name, wie im Dummy-PRODUCTS-Array (Feld "icon"). #}
+{%- macro category_icon(category, size=64) -%}
+{%- if category == "Spa Robe" -%}{{ icon("robe", size) }}
+{%- elif category == "Spa Bag" -%}{{ icon("bag2", size) }}
+{%- elif category == "Water Bottle" -%}{{ icon("bottle", size) }}
+{%- elif category == "Towel" -%}{{ icon("towel", size) }}
+{%- else -%}{{ icon("robe", size) }}
+{%- endif -%}
+{%- endmacro -%}
+
+{%- macro logo_mark() -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M4 4 L12 19 L20 4"/><path d="M10.3 8.2c.7.9 1.7.9 3.4 0"/>
+</svg>
+{%- endmacro -%}
