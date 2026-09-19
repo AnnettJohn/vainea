@@ -85,6 +85,48 @@ SQLAdmin-Zugriffsschutz sowie Sitemap/Schema.org-Markup.
 Läuft bei jedem Push/PR automatisch über [GitHub Actions](../.github/workflows/ci.yml)
 (Lint + Tests, siehe Badge oben).
 
+## Deployment
+
+Referenz-Setup für einen einzelnen Hetzner-Server (siehe Pflichtenheft,
+Deployment & Hosting): FastAPI-App in Docker, dahinter Caddy als Reverse
+Proxy mit automatischem Let's-Encrypt-TLS, Postgres läuft im selben
+Compose-Stack mit ("mitlaufende Instanz").
+
+```bash
+cp .env.example .env   # echte Werte eintragen, insbesondere POSTGRES_PASSWORD/SECRET_KEY
+# Domain(s) in Caddyfile anpassen (Default: vainea.de, www.vainea.de)
+docker compose up -d --build
+```
+
+Migrationen laufen automatisch beim Container-Start (`docker-entrypoint.sh`).
+Einmalig danach seeden bzw. einen Admin-Account anlegen:
+
+```bash
+docker compose exec app python -m scripts.seed
+docker compose exec app python -c "..."   # siehe Admin-Snippet oben
+```
+
+Das Admin-Interface läuft vorerst unter `/admin` auf der Root-Domain (wie im
+Pflichtenheft vorgesehen) und kann später auf eine eigene Subdomain
+umziehen, ohne dass sich am Datenmodell etwas ändert - dafür ist im
+`Caddyfile` bereits ein auskommentierter Beispielblock hinterlegt.
+
+**Bewusst noch nicht umgesetzt** (nicht Teil dieses Schritts): Produktbilder
+in Objektspeicher statt im Image selbst (Pflichtenheft nennt das explizit
+als Produktionsanforderung) - aktuell werden `app/static/images` einfach mit
+ins Docker-Image gebaut.
+
+**Ein beim Bauen dieser Config gefundener und behobener Fehler**: Ein naiver
+`pip install .`-Schritt im Dockerfile hätte ein Wheel des eigenen Pakets
+gebaut, das mangels `package_data`-Konfiguration keine Templates/Static-
+Dateien enthält (setuptools bündelt standardmäßig nur `.py`-Dateien) - der
+Container hätte ohne jede Fehlerseite einfach nur 500er ausgeliefert. Fix:
+das eigene Paket nach der Dependency-Installation wieder deinstallieren und
+stattdessen den echten Quellcode direkt kopieren (`PYTHONPATH=/app`). Gegen
+eine originalgetreu nachgebaute Laufzeitumgebung (kein Docker in dieser
+Sandbox verfügbar) sowie mit einem echten, validierten Caddy-Reverse-Proxy
+verifiziert.
+
 ## Stand
 
 Umgesetzt: Projektgrundgerüst, alle SQLAlchemy-Modelle (inkl. `WishlistItem`)
@@ -142,6 +184,6 @@ das Pflichtenheft-Datenmodell keine eigene Address-Entität vorsieht).
 Noch offen: Homepage-Content aus dem Dummy (Hero-Slider, Quiz,
 Instagram-Teaser, Newsletter-Formular), ein echter SMTP-Anbieter für
 Produktion (aktuell auf Mailhog/Mailpit-Defaults für lokale Entwicklung
-eingestellt), Deployment-Vorbereitung (Dockerfile, Caddy-Config für den
-Hetzner-Stack), sowie die endgültigen Inhalte für Rechtstexte und die
+eingestellt), Produktbilder in Objektspeicher statt im Docker-Image (siehe
+Deployment-Abschnitt), sowie die endgültigen Inhalte für Rechtstexte und die
 finalen Versandzonen/-tarife (aktuell Platzhalter, siehe oben).

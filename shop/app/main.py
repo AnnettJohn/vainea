@@ -17,6 +17,14 @@ app = FastAPI(title="VAINEA")
 
 app.add_middleware(SessionMiddleware, secret_key=settings.admin_session_secret)
 
+
+@app.get("/healthz")
+async def healthz():
+    """Für Docker HEALTHCHECK / Caddy / Monitoring - bewusst ohne DB-Zugriff,
+    damit der Check schnell bleibt und nicht selbst zur Fehlerquelle wird."""
+    return {"status": "ok"}
+
+
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
