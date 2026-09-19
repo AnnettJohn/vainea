@@ -1,6 +1,8 @@
 <a class="product-card" href="/products/{{ p.slug }}" style="--accent: {{ p.state.hex_color }}">
   {% if p.images %}
   <img src="{{ p.images[0].url }}" alt="{{ p.images[0].alt_text or p.name }}" loading="lazy">
+  {% else %}
+  <div class="product-media-placeholder" aria-hidden="true"></div>
   {% endif %}
   <div class="product-card-body">
     {% if p.is_new %}<span class="badge">Neu</span>{% endif %}

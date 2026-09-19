@@ -76,12 +76,13 @@ python -m pytest
 Startet für die Dauer des Testlaufs automatisch eine eigene, ephemere
 Postgres-Instanz und einen echten lokalen SMTP-Server (kein laufender
 Server/Docker nötig) und legt darin States/Produkte/Versandzonen wie im
-Seed-Skript an. 49 Tests decken die zentralen Flows ab: Warenkorb, Checkout
+Seed-Skript an. 56 Tests decken die zentralen Flows ab: Warenkorb, Checkout
 (inkl. Versandzonen-Fallback, Bestandsreservierung mit Race-Condition-Fall,
 Rabattcodes, Webhook-Idempotenz), Bestellbestätigungsmail (inkl. Ausfall-
 sicherheit bei SMTP-Fehlern), Login/Registrierung/Wishlist,
 SQLAdmin-Zugriffsschutz, Objektspeicher-Upload/URL-Migration (gegen einen
-von `moto` gemockten S3-Bucket) sowie Sitemap/Schema.org-Markup.
+von `moto` gemockten S3-Bucket), Sitemap/Schema.org-Markup sowie der aus
+dem Click-Dummy übernommene Homepage-Content.
 
 Läuft bei jedem Push/PR automatisch über [GitHub Actions](../.github/workflows/ci.yml)
 (Lint + Tests, siehe Badge oben).
@@ -208,10 +209,27 @@ Gast-Nutzer cookie-basiert), kein eigenes Adressbuch-Modell (die
 Konto-Adressen sind read-only aus vergangenen Bestellungen abgeleitet, da
 das Pflichtenheft-Datenmodell keine eigene Address-Entität vorsieht).
 
-Noch offen: Homepage-Content aus dem Dummy (Hero-Slider, Quiz,
-Instagram-Teaser, Newsletter-Formular), ein echter SMTP-Anbieter für
-Produktion (aktuell auf Mailhog/Mailpit-Defaults für lokale Entwicklung
-eingestellt), ein Datei-Upload-Feld im Admin für neue Produktbilder (aktuell
-URL-Feld, Upload erfolgt separat über Hetzner-Console/CLI), sowie die
-endgültigen Inhalte für Rechtstexte und die finalen Versandzonen/-tarife
-(aktuell Platzhalter, siehe oben).
+**Homepage-Content aus dem Click-Dummy** (`index.html`) 1:1 nachgebaut,
+serverseitig gerendert mit echten DB-Daten statt der dummy-eigenen
+JS-Arrays: Hero mit State-Umschaltung (Klick auf einen State-Kreis wechselt
+Bild/Text/CTA per Vanilla-JS, kein Server-Roundtrip), States-Grid mit
+Hover-Reveal der Story, Brand-Line-Copy, "Most Wanted" (die vier Mono-Robes),
+Detail-Kachelreihe, "Shop the Look" mit klickbaren Bild-Hotspots,
+"Complete Your State"-Accessoires, der "Find your state"-Quiz (alle vier
+Ergebnisse serverseitig vorgerendert, JS blendet nur um) sowie Instagram-
+Teaser und Newsletter-Formular.
+
+**Bewusst nicht angebunden**: Das Newsletter-Formular verhält sich wie im
+Click-Dummy rein clientseitig (zeigt eine Erfolgsmeldung, speichert aber
+nichts) - eine echte Anbindung (Datenbank-Tabelle oder Anbieter wie
+Mailchimp/Brevo) ist im Pflichtenheft nicht vorgesehen und bräuchte vorher
+eine Entscheidung, welcher Weg gewünscht ist. Instagram/Pinterest-Links
+sind wie im Dummy Platzhalter (`href="#"`), da keine echten Profil-URLs
+vorliegen.
+
+Noch offen: ein echter SMTP-Anbieter für Produktion (aktuell auf
+Mailhog/Mailpit-Defaults für lokale Entwicklung eingestellt), ein
+Datei-Upload-Feld im Admin für neue Produktbilder (aktuell URL-Feld, Upload
+erfolgt separat über Hetzner-Console/CLI), sowie die endgültigen Inhalte für
+Rechtstexte und die finalen Versandzonen/-tarife (aktuell Platzhalter, siehe
+oben).

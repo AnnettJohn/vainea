@@ -1,20 +1,199 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="section states-grid">
-  <div class="wrap">
-    <p class="eyebrow">Wear your state of mind</p>
-    <div class="states-list">
-      {% for s in states %}
-      <a class="state-card" href="/states/{{ s.slug }}" style="--accent: {{ s.hex_color }}">
-        <img src="{{ s.hero_image_url }}" alt="{{ s.name }}" style="object-position: {{ s.hero_image_position }}">
-        <div class="state-card-body">
-          <span class="state-num">{{ s.num }}</span>
-          <h2 class="h-editorial">{{ s.name }}</h2>
-          <p>{{ s.mood_text }}</p>
-        </div>
+
+<section class="hero" id="hero" style="--accent: {{ states[0].hex_color }}" data-hero>
+  {% for s in states %}
+  <div class="hero-slide{% if loop.first %} is-active{% endif %}" data-hero-slide="{{ s.slug }}"
+       style="background-image:url('{{ s.hero_image_url }}'); background-position: {{ s.hero_image_position }}"></div>
+  {% endfor %}
+  <div class="hero-scrim"></div>
+  <div class="wrap hero-content">
+    <div class="hero-text-block">
+      <div class="eyebrow hero-eyebrow" data-hero-eyebrow>{{ states[0].mood_text }}</div>
+      <h1 class="h-editorial hero-headline">Wear your<br>state of mind.</h1>
+      <p class="hero-state-line" data-hero-line>{{ states[0].brand_line }}</p>
+      <a href="/states/{{ states[0].slug }}" class="btn hero-cta" data-hero-cta>
+        <span data-hero-cta-label>Shop {{ states[0].num }} {{ states[0].name }}</span>
       </a>
+    </div>
+    <div class="hero-state-row">
+      {% for s in states %}
+      <button type="button" class="hero-state-btn{% if loop.first %} is-active{% endif %}" style="--accent: {{ s.hex_color }}"
+              data-hero-select="{{ s.slug }}" data-hero-num="{{ s.num }}" data-hero-name="{{ s.name }}"
+              data-hero-mood="{{ s.mood_text }}" data-hero-line="{{ s.brand_line }}" data-hero-hex="{{ s.hex_color }}"
+              aria-pressed="{{ 'true' if loop.first else 'false' }}" aria-label="Show {{ s.name }} — {{ s.brand_line }}">
+        <span class="hero-state-circle" style="background-image:url('{{ s.circle_image_url }}')"></span>
+        <span class="hero-state-label">{{ s.name }}</span>
+      </button>
       {% endfor %}
     </div>
   </div>
 </section>
+
+<section class="states-grid">
+  {% for s in states %}
+  <a class="state-panel" href="/states/{{ s.slug }}" style="--accent: {{ s.hex_color }}">
+    <img src="{{ s.hero_image_url }}" alt="{{ s.name }} — {{ s.mood_text }}" style="object-position: {{ s.hero_image_position }}" loading="lazy">
+    <div class="state-panel-scrim"></div>
+    <div class="state-panel-body">
+      <div>
+        <div class="state-num">{{ s.num }}</div>
+        <div class="state-name h-editorial">{{ s.name }}</div>
+        <div class="state-mood">{{ s.mood_text }}</div>
+      </div>
+      <div class="state-panel-reveal">
+        <div class="state-line">{{ s.brand_line }}</div>
+        <p class="state-panel-story">{{ s.story_text }}</p>
+        <span class="state-cta">Shop {{ s.name }} →</span>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</section>
+
+<section class="section brand-line">
+  <div class="wrap brand-line-grid">
+    <div class="brand-line-col">
+      <p class="eyebrow">Wear your state of mind</p>
+      <h2 class="h-editorial brand-line-headline">Your time.<br>Your color.<br>Your state.</h2>
+      <div class="brand-line-swatches">
+        {% for s in states %}<span class="brand-line-swatch" style="background: {{ s.hex_color }}"></span>{% endfor %}
+      </div>
+    </div>
+    <div class="brand-line-col">
+      <p class="brand-line-copy">VAINEA steht für die besonderen Momente zwischen Alltag und Auszeit. Für das Gefühl nach dem Schwimmen. Für langsame Morgen. Für Sonne auf warmer Haut. Für Ruhe nach einem langen Tag. Für diese wenigen Minuten, in denen nichts anderes zählt.</p>
+      <p class="brand-line-copy">Unsere Pieces verbinden Spa, Resort und Everyday Comfort zu einer neuen Form von Lifestyle: weiche Materialien auf klaren Silhouetten, helle Grundtöne auf starken Farbakzenten, Komfort auf Design.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section section--tight">
+  <div class="wrap">
+    <div class="section-head">
+      <div><p class="eyebrow">Editor's Pick</p><h2 class="h-editorial">Most Wanted</h2></div>
+      <span class="section-head-count">{{ featured_products|length }} pieces</span>
+    </div>
+    <div class="product-grid">
+      {% for p in featured_products %}{% include "partials/product_card.html" %}{% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="section-head"><div><p class="eyebrow">Craft</p><h2 class="h-editorial">Details Make the State.</h2></div></div>
+    <div class="detail-grid">
+      {% for label, state_slug in detail_tiles %}
+      {% set s = states_by_slug[state_slug] %}
+      <div class="detail-tile" style="background: linear-gradient(150deg, {{ s.hex_color }}33, var(--vanilla))">
+        <span>{{ label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if look_hotspots %}
+<section class="section section--tight bg-vanilla">
+  <div class="wrap">
+    <div class="section-head"><div><p class="eyebrow">Styled together</p><h2 class="h-editorial">Shop the Look</h2></div></div>
+    <div class="look-frame" data-look>
+      <img src="/static/images/shopthelook.png" alt="SUN Look, gestylt mit Robe, Tote Bag, Handtuch und Trinkflasche">
+      {% for spot in look_hotspots %}
+      <button type="button" class="hotspot" style="left: {{ spot.x }}%; top: {{ spot.y }}%"
+              data-look-toggle="{{ spot.product.id }}" aria-label="{{ spot.product.name }} anzeigen"></button>
+      {% endfor %}
+      {% for spot in look_hotspots %}
+      <div class="hotspot-card" data-look-card="{{ spot.product.id }}" style="left: {{ spot.x }}%; top: {{ spot.y }}%">
+        <div class="hotspot-card-name">{{ spot.product.name }}</div>
+        <div class="hotspot-card-price">€{{ "%.2f"|format(spot.product.price) }}</div>
+        <a class="btn" href="/products/{{ spot.product.slug }}">Ansehen</a>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="text-align:center;margin-top:30px"><a href="/shop" class="btn btn--ghost">Shop the Look</a></div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section" id="accessories">
+  <div class="wrap">
+    <div class="section-head"><div><p class="eyebrow">Layer it on</p><h2 class="h-editorial">Complete Your State.</h2></div></div>
+    <div class="product-grid">
+      {% for p in accessory_products %}{% include "partials/product_card.html" %}{% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="quiz-box" data-quiz>
+      <p class="eyebrow quiz-eyebrow">Find your state</p>
+      <h2 class="h-editorial quiz-headline">How do you want to feel today?</h2>
+      <div class="mood-row">
+        {% for label, state_slug in quiz_moods %}
+        <button type="button" class="mood-btn" style="--accent: {{ states_by_slug[state_slug].hex_color }}" data-quiz-mood="{{ state_slug }}">{{ label }}</button>
+        {% endfor %}
+      </div>
+      {% for label, state_slug in quiz_moods %}
+      {% set s = states_by_slug[state_slug] %}
+      <div class="quiz-result" data-quiz-result="{{ state_slug }}" hidden>
+        <p class="eyebrow" style="color: {{ s.hex_color }}">{{ s.num }} — {{ s.name }}</p>
+        <p class="quiz-result-line">{{ s.brand_line }}</p>
+        <p class="quiz-result-mood">{{ s.mood_text }}</p>
+        <div class="quiz-mini-row">
+          {% for p in quiz_products_by_state[state_slug] %}
+          <a class="quiz-mini-card" href="/products/{{ p.slug }}">
+            {% if p.images %}<img src="{{ p.images[0].url }}" alt="{{ p.name }}">{% endif %}
+            <p><strong>{{ p.name }}</strong><br>€{{ "%.2f"|format(p.price) }}</p>
+          </a>
+          {% endfor %}
+        </div>
+        <a class="btn quiz-cta" href="/states/{{ s.slug }}">Shop {{ s.name }}</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="insta-teaser">
+  <div class="insta-grid">
+    {% for src in [
+      "/static/images/hero-sun.jpg",
+      "/static/images/piece_towel_sun.png",
+      "/static/images/hero-sea.jpg",
+      "/static/images/robe_mono_front_sun.png",
+      "/static/images/hero-dream.jpg",
+      "/static/images/hero-light.jpg"
+    ] %}
+    <div class="insta-tile"><img src="{{ src }}" alt="" loading="lazy"></div>
+    {% endfor %}
+  </div>
+  <div class="insta-scrim"></div>
+  <div class="insta-card">
+    <p class="insta-eyebrow">Ab sofort auf Instagram</p>
+    <h2 class="h-editorial insta-headline">Folge unserem State.</h2>
+    <p class="insta-sub">Blicke hinter die Kulissen, neue Farben zuerst — und Early-Access für unsere ersten Follower.</p>
+    <div class="insta-cta-row">
+      <a href="#" class="btn insta-btn-primary">@vainea folgen</a>
+      <a href="#" class="insta-pin-link">Auch auf Pinterest</a>
+    </div>
+  </div>
+</section>
+
+<section class="section section--tight bg-vanilla">
+  <div class="wrap newsletter">
+    <p class="eyebrow">New drops. New colors. New escapes.</p>
+    <h2 class="h-editorial">Bleibe mit unserem Newsletter auf dem Laufenden.</h2>
+    <form class="newsletter-form" data-newsletter-form>
+      <input type="email" required placeholder="Deine E-Mail-Adresse" data-newsletter-input>
+      <button class="btn" type="submit">Jetzt anmelden</button>
+    </form>
+    <p class="newsletter-success" data-newsletter-success hidden>Danke, du bist auf der Liste.</p>
+  </div>
+</section>
+
+{% endblock %}
+{% block extra_head %}
+<script src="/static/js/home.js" defer></script>
 {% endblock %}
