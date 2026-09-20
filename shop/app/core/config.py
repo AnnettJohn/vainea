@@ -36,6 +36,18 @@ class Settings(BaseSettings):
     s3_secret_access_key: str = ""
     s3_public_base_url: str = ""
 
+    # Eigener, NICHT öffentlicher Bucket für die Datenbank-Dumps aus
+    # scripts/backup.sh. Bewusst getrennt vom Bilder-Bucket: der ist
+    # absichtlich öffentlich lesbar, ein Dump dort wäre ein Datenleck mit
+    # Namen, Adressen und Bestellhistorien. scripts/upload_backup.py
+    # verweigert den Upload, wenn beide Werte gleich sind.
+    s3_backup_bucket: str = ""
+
+    # Aufbewahrung der Dumps im Objektspeicher. Bewusst laenger als die
+    # lokale Frist in backup.sh: die Offsite-Kopie ist die, die im Ernstfall
+    # noch da ist.
+    backup_retention_days: int = 30
+
     environment: str = "development"
 
     @property

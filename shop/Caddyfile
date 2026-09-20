@@ -4,7 +4,41 @@
 # diesen Server zeigt und Port 80+443 erreichbar sind.
 
 vainea.de, www.vainea.de {
+	encode zstd gzip
+
+	header {
+		# HSTS setzt Caddy NICHT von selbst, obwohl es TLS automatisch
+		# einrichtet. Zwei Jahre inkl. Subdomains; preload bewusst nicht
+		# gesetzt, das ist eine schwer rückgängig zu machende Entscheidung.
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+
+		# Kein Framing (Clickjacking auf Login/Checkout), kein MIME-Sniffing.
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+
+		# Referrer nur an die eigene Herkunft, nie an Dritte - sonst lecken
+		# Bestell- und Kontopfade an externe Ziele.
+		Referrer-Policy "strict-origin-when-cross-origin"
+
+		# Browser-APIs, die der Shop nicht braucht, gar nicht erst freigeben.
+		Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+
+		# Verrät sonst den Server hinter dem Proxy.
+		-Server
+	}
+
+	# Statische Dateien sind versionslos benannt, daher bewusst kurz
+	# gecached - sonst sehen Besucher nach einem Deploy das alte Stylesheet.
+	# Bei einem späteren Asset-Hashing kann das auf ein Jahr hoch.
+	@static path /static/*
+	header @static Cache-Control "public, max-age=3600"
+
 	reverse_proxy app:8000
+
+	log {
+		output stdout
+		format json
+	}
 }
 
 # Das Admin-Interface läuft vorerst unter dem geschützten Pfad /admin auf

@@ -1,13 +1,22 @@
 """Überführt STATES und PRODUCTS aus dem Click-Dummy (index.html) in die DB.
 
-Idempotent: vorhandene States/Products werden anhand ihres Slugs erkannt und
-aktualisiert statt dupliziert. Ausführen mit:
+Idempotent und standardmäßig NICHT destruktiv: vorhandene Zeilen werden
+anhand ihres Slugs erkannt und in Ruhe gelassen, es werden nur fehlende
+angelegt. Das ist wichtig, weil der Seed bei jedem Containerstart läuft
+(docker-entrypoint.sh) - würde er überschreiben, setzte jedes Deployment die
+im Admin gepflegten Preise, Texte und Versandtarife auf die Dummy-Werte
+zurück.
 
-    uv run python -m scripts.seed
+    python -m scripts.seed            # fehlende Zeilen anlegen (sicher)
+    python -m scripts.seed --force    # vorhandene zusätzlich überschreiben
+
+--force ist für die Entwicklung gedacht, wenn die Dummy-Daten bewusst neu
+eingespielt werden sollen.
 """
 
 import asyncio
 import re
+import sys
 import uuid
 
 from sqlalchemy import select
@@ -132,7 +141,7 @@ def product_group_id_for(product: dict) -> str:
     return slugify(product["category"])
 
 
-async def seed_states(session) -> dict[str, State]:
+async def seed_states(session, overwrite: bool = False) -> dict[str, State]:
     by_slug: dict[str, State] = {}
     for data in STATES:
         result = await session.execute(select(State).where(State.slug == data["slug"]))
@@ -140,7 +149,7 @@ async def seed_states(session) -> dict[str, State]:
         if state is None:
             state = State(**data)
             session.add(state)
-        else:
+        elif overwrite:
             for key, value in data.items():
                 setattr(state, key, value)
         by_slug[data["slug"]] = state
@@ -148,7 +157,7 @@ async def seed_states(session) -> dict[str, State]:
     return by_slug
 
 
-async def seed_products(session, states_by_slug: dict[str, State]) -> None:
+async def seed_products(session, states_by_slug: dict[str, State], overwrite: bool = False) -> None:
     for data in PRODUCTS:
         slug = slugify(data["name"])
         result = await session.execute(
@@ -176,7 +185,7 @@ async def seed_products(session, states_by_slug: dict[str, State]) -> None:
             product = Product(id=uuid.uuid4(), **values)
             session.add(product)
             await session.flush()
-        else:
+        elif overwrite:
             for key, value in values.items():
                 setattr(product, key, value)
 
@@ -210,17 +219,18 @@ async def seed_products(session, states_by_slug: dict[str, State]) -> None:
             )
 
 
-# Platzhalter-Versandzonen/-tarife, wie im Pflichtenheft als Beispiel
-# genannt (Deutschland/EU/Rest der Welt) - Werte sind Annahmen, bis
-# konkrete Zonen/Tarife feststehen, und lassen sich im Admin unter
-# /admin/shipping-zone jederzeit anpassen. Die Freigrenze für Deutschland
-# übernimmt den bereits im Dummy kommunizierten Wert ("Free shipping on
-# orders over €120").
-EU_COUNTRY_CODES = [
-    "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "GR", "HU",
-    "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE",
-]
-
+# VAINEA liefert aktuell ausschließlich in die DACH-Region (Entscheidung vom
+# 19.09.2026). Es gibt bewusst KEINE Auffangzone mit leerer country_codes-Liste
+# mehr: sonst nimmt der Checkout jedes Land an, statt die Bestellung abzulehnen.
+#
+# Die Schweiz ist eine eigene Zone, weil sie außerhalb des EU-Zoll- und
+# Mehrwertsteuergebiets liegt - eine Lieferung dorthin ist eine Ausfuhr, bei der
+# Zoll und Einfuhrsteuer beim Empfänger anfallen. Die umsatzsteuerliche
+# Behandlung (Ausfuhrlieferung, mögliche CH-Steuerpflicht ab CHF 100.000
+# Versandumsatz) ist noch mit der Steuerberatung zu klären.
+#
+# Die Beträge sind Platzhalter, bis die echten Tarife feststehen; sie werden
+# danach unter /admin gepflegt, nicht hier im Code.
 SHIPPING_ZONES = [
     {
         "name": "Deutschland",
@@ -229,21 +239,21 @@ SHIPPING_ZONES = [
         "rates": [{"method_name": "Standard", "price": "4.95"}],
     },
     {
-        "name": "EU",
-        "country_codes": EU_COUNTRY_CODES,
+        "name": "Österreich",
+        "country_codes": ["AT"],
         "free_shipping_threshold": "150.00",
         "rates": [{"method_name": "Standard", "price": "9.95"}],
     },
     {
-        "name": "Rest der Welt",
-        "country_codes": [],  # leere Liste = Fallback-Zone, siehe app/core/checkout.py
+        "name": "Schweiz",
+        "country_codes": ["CH"],
         "free_shipping_threshold": None,
-        "rates": [{"method_name": "Standard International", "price": "19.95"}],
+        "rates": [{"method_name": "Standard", "price": "14.95"}],
     },
 ]
 
 
-async def seed_shipping_zones(session) -> None:
+async def seed_shipping_zones(session, overwrite: bool = False) -> None:
     for data in SHIPPING_ZONES:
         result = await session.execute(select(ShippingZone).where(ShippingZone.name == data["name"]))
         zone = result.scalar_one_or_none()
@@ -255,7 +265,7 @@ async def seed_shipping_zones(session) -> None:
             )
             session.add(zone)
             await session.flush()
-        else:
+        elif overwrite:
             zone.country_codes = data["country_codes"]
             zone.free_shipping_threshold = data["free_shipping_threshold"]
 
@@ -263,7 +273,8 @@ async def seed_shipping_zones(session) -> None:
         existing_rates = {r.method_name: r for r in rate_result.scalars().all()}
         for rate_data in data["rates"]:
             if rate_data["method_name"] in existing_rates:
-                existing_rates[rate_data["method_name"]].price = rate_data["price"]
+                if overwrite:
+                    existing_rates[rate_data["method_name"]].price = rate_data["price"]
             else:
                 session.add(
                     ShippingRate(
@@ -272,11 +283,11 @@ async def seed_shipping_zones(session) -> None:
                 )
 
 
-async def main() -> None:
+async def main(overwrite: bool = False) -> None:
     async with async_session_maker() as session:
-        states_by_slug = await seed_states(session)
-        await seed_products(session, states_by_slug)
-        await seed_shipping_zones(session)
+        states_by_slug = await seed_states(session, overwrite=overwrite)
+        await seed_products(session, states_by_slug, overwrite=overwrite)
+        await seed_shipping_zones(session, overwrite=overwrite)
         await session.commit()
     print(
         f"Seed abgeschlossen: {len(STATES)} States, {len(PRODUCTS)} Produkte, "
@@ -285,4 +296,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main(overwrite="--force" in sys.argv))

@@ -29,11 +29,17 @@
           <label>Stadt
             <input type="text" name="shipping_city" required value="{{ form_data.shipping_city or '' }}">
           </label>
-          <label>Land (ISO-Code, z. B. DE)
-            <input type="text" name="shipping_country" required maxlength="2"
-                   value="{{ form_data.shipping_country or 'DE' }}"
-                   hx-get="/checkout/shipping-methods" hx-trigger="change, keyup delay:500ms"
-                   hx-target="#shipping-methods" hx-include="this">
+          <label>Land
+            {#- Nur die Länder, in die wir tatsächlich liefern. Ein freies
+                Textfeld hätte Bestellungen aus Ländern zugelassen, die der
+                Checkout danach wieder ablehnen muss. -#}
+            <select name="shipping_country" required
+                    hx-get="/checkout/shipping-methods" hx-trigger="change"
+                    hx-target="#shipping-methods" hx-include="this">
+              {% for code, label in shipping_countries %}
+              <option value="{{ code }}" {% if (form_data.shipping_country or 'DE') == code %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
           </label>
         </fieldset>
 
@@ -60,8 +66,13 @@
             <label>Stadt
               <input type="text" name="billing_city" value="{{ form_data.billing_city or '' }}">
             </label>
-            <label>Land (ISO-Code)
-              <input type="text" name="billing_country" maxlength="2" value="{{ form_data.billing_country or '' }}">
+            <label>Land
+              <select name="billing_country">
+                <option value="">— wie Lieferadresse —</option>
+                {% for code, label in shipping_countries %}
+                <option value="{{ code }}" {% if form_data.billing_country == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
             </label>
           </fieldset>
         </details>

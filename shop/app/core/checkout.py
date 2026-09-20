@@ -22,8 +22,13 @@ def generate_order_number() -> str:
 
 
 async def get_shipping_zone(db: AsyncSession, country_code: str) -> ShippingZone | None:
-    """Zone für ein Länderkürzel ermitteln. Eine Zone mit leerer
-    country_codes-Liste dient als Fallback ("Rest der Welt")."""
+    """Zone für ein Länderkürzel ermitteln, oder None, wenn wir nicht dorthin
+    liefern.
+
+    Bewusst ohne Fallback-Zone: VAINEA versendet nur in die DACH-Region, und
+    eine Auffangzone würde dazu führen, dass der Checkout jedes Land annimmt,
+    statt die Bestellung abzulehnen. Neue Länder kommen über eine Zone im
+    Admin dazu, nicht über einen Code-Fallback."""
     if not country_code:
         return None
     country_code = country_code.upper()
@@ -33,15 +38,33 @@ async def get_shipping_zone(db: AsyncSession, country_code: str) -> ShippingZone
         .options(selectinload(ShippingZone.rates))
         .where(ShippingZone.country_codes.any(country_code))
     )
-    zone = result.scalars().first()
+    return result.scalars().first()
 
-    if zone is None:
-        fallback_result = await db.execute(
-            select(ShippingZone).options(selectinload(ShippingZone.rates)).where(ShippingZone.country_codes == [])
-        )
-        zone = fallback_result.scalars().first()
 
-    return zone
+# Deutsche Länderbezeichnungen für die Auswahl im Checkout. Bewusst klein
+# gehalten statt einer vollständigen ISO-Liste: angeboten wird nur, wohin wir
+# laut Versandzonen liefern. Ein unbekannter Code fällt auf sich selbst zurück,
+# damit eine neu im Admin angelegte Zone nicht zu einer leeren Option führt.
+COUNTRY_NAMES = {
+    "DE": "Deutschland",
+    "AT": "Österreich",
+    "CH": "Schweiz",
+}
+
+# Länder außerhalb des EU-Zoll- und Mehrwertsteuergebiets: dorthin ist die
+# Lieferung eine Ausfuhr, Zoll und Einfuhrsteuer fallen beim Empfänger an.
+NON_EU_COUNTRIES = {"CH"}
+
+
+async def shipping_countries(db: AsyncSession) -> list[tuple[str, str]]:
+    """Alle Länder, in die laut hinterlegten Zonen geliefert wird - als
+    (Code, Bezeichnung), alphabetisch nach Bezeichnung.
+
+    Kommt aus der Datenbank statt aus einer Konstante, damit eine im Admin
+    ergänzte Zone sofort im Checkout auswählbar ist."""
+    result = await db.execute(select(ShippingZone.country_codes))
+    codes = sorted({code for row in result.scalars().all() for code in (row or [])})
+    return sorted(((code, COUNTRY_NAMES.get(code, code)) for code in codes), key=lambda pair: pair[1])
 
 
 def shipping_cost_for(zone: ShippingZone, rate: ShippingRate, subtotal: Decimal) -> Decimal:

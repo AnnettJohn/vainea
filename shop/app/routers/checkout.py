@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.cart import cart_subtotal, get_cart_if_exists
 from app.core.checkout import (
+    NON_EU_COUNTRIES,
     apply_discount_code,
     apply_payment_status,
     generate_order_number,
@@ -16,6 +17,7 @@ from app.core.checkout import (
     reserve_stock,
     resolve_shipping_choice,
     shipping_cost_for,
+    shipping_countries,
 )
 from app.core.config import get_settings
 from app.core.context import get_base_context
@@ -55,6 +57,8 @@ async def checkout_address(
         "subtotal": subtotal,
         "zone": zone,
         "shipping_cost_for": shipping_cost_for,
+        "shipping_countries": await shipping_countries(db),
+        "is_non_eu": default_country in NON_EU_COUNTRIES,
         "form_data": {"shipping_country": default_country, "email": user.email if user else ""},
         "error": None,
         "page_title": "Checkout — Adresse",
@@ -71,7 +75,12 @@ async def shipping_methods_fragment(
     cart = await get_cart_if_exists(request, db)
     subtotal = cart_subtotal(cart)
     zone = await get_shipping_zone(db, shipping_country) if shipping_country else None
-    context = {"zone": zone, "subtotal": subtotal, "shipping_cost_for": shipping_cost_for}
+    context = {
+        "zone": zone,
+        "subtotal": subtotal,
+        "shipping_cost_for": shipping_cost_for,
+        "is_non_eu": shipping_country.upper() in NON_EU_COUNTRIES,
+    }
     return templates.TemplateResponse(request, "partials/shipping_methods_options.html", context)
 
 
@@ -118,6 +127,8 @@ async def submit_checkout_address(
             "subtotal": cart_subtotal(cart),
             "zone": zone,
             "shipping_cost_for": shipping_cost_for,
+            "shipping_countries": await shipping_countries(db),
+            "is_non_eu": shipping_country.upper() in NON_EU_COUNTRIES,
             "form_data": form_data,
             "error": message,
             "page_title": "Checkout — Adresse",
@@ -132,8 +143,8 @@ async def submit_checkout_address(
     shipping_match = await resolve_shipping_choice(db, shipping_country, shipping_rate_id, subtotal)
     if shipping_match is None:
         return await render_error(
-            f"Leider versenden wir aktuell nicht nach „{shipping_country}“. "
-            "Bitte kontaktiere uns für eine individuelle Lösung."
+            "Wir versenden aktuell nur nach Deutschland, Österreich und in die Schweiz. "
+            "Für andere Länder melde dich gern direkt bei uns."
         )
     zone, rate, shipping_cost = shipping_match
 

@@ -80,18 +80,44 @@ async def test_checkout_with_empty_cart_shows_error(client):
     assert "Warenkorb ist leer" in response.text
 
 
-async def test_checkout_falls_back_to_rest_of_world_zone(client, db_session):
+async def test_checkout_rejects_country_outside_dach(client, db_session):
+    """VAINEA liefert nur nach DE/AT/CH. Früher fing eine Zone mit leerer
+    country_codes-Liste jedes andere Land ab - genau das darf nicht mehr
+    passieren, sonst entstehen Bestellungen, die nicht erfüllbar sind."""
     size = await _get_size(db_session, "sun-mono-robe", "M")
     await _add_to_cart(client, str(size.id), quantity=1)
 
     data = {**VALID_ADDRESS, "shipping_country": "US"}
     response = await client.post("/checkout/address", data=data, follow_redirects=False)
 
+    assert response.status_code == 400
+    assert "nur nach Deutschland, Österreich und in die Schweiz" in response.text
+
+
+async def test_checkout_to_switzerland_uses_own_zone(client, db_session):
+    """Die Schweiz hat eine eigene Zone (Ausfuhr, kein EU-Zollgebiet) und
+    deshalb weder die deutsche Freigrenze noch den österreichischen Tarif."""
+    size = await _get_size(db_session, "sun-mono-robe", "M")
+    await _add_to_cart(client, str(size.id), quantity=1)
+
+    data = {**VALID_ADDRESS, "shipping_country": "CH"}
+    response = await client.post("/checkout/address", data=data, follow_redirects=False)
+
     assert response.status_code == 303
     order_number = response.headers["location"].split("/checkout/payment/")[1]
     order = await get_order_by_number(db_session, order_number)
-    assert order.shipping_method_name == "Standard International"
-    assert float(order.shipping_cost) == approx(19.95)
+    assert order.shipping_country == "CH"
+    assert float(order.shipping_cost) == approx(14.95)
+
+
+async def test_checkout_shows_customs_notice_for_switzerland(client):
+    """Pflichthinweis bei Ausfuhr: Zoll und Einfuhrsteuer sind nicht im Preis."""
+    response = await client.get("/checkout/shipping-methods?shipping_country=CH")
+    assert response.status_code == 200
+    assert "Einfuhrumsatzsteuer" in response.text
+
+    response = await client.get("/checkout/shipping-methods?shipping_country=DE")
+    assert "Einfuhrumsatzsteuer" not in response.text
 
 
 async def test_checkout_rejects_insufficient_stock(client, db_session):

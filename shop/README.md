@@ -76,13 +76,15 @@ python -m pytest
 Startet für die Dauer des Testlaufs automatisch eine eigene, ephemere
 Postgres-Instanz und einen echten lokalen SMTP-Server (kein laufender
 Server/Docker nötig) und legt darin States/Produkte/Versandzonen wie im
-Seed-Skript an. 56 Tests decken die zentralen Flows ab: Warenkorb, Checkout
-(inkl. Versandzonen-Fallback, Bestandsreservierung mit Race-Condition-Fall,
+Seed-Skript an. 71 Tests decken die zentralen Flows ab: Warenkorb, Checkout
+(inkl. DACH-Versandzonen und Ablehnung anderer Länder, Bestandsreservierung mit Race-Condition-Fall,
 Rabattcodes, Webhook-Idempotenz), Bestellbestätigungsmail (inkl. Ausfall-
 sicherheit bei SMTP-Fehlern), Login/Registrierung/Wishlist,
 SQLAdmin-Zugriffsschutz, Objektspeicher-Upload/URL-Migration (gegen einen
 von `moto` gemockten S3-Bucket), Sitemap/Schema.org-Markup sowie der aus
-dem Click-Dummy übernommene Homepage-Content.
+dem Click-Dummy übernommene Homepage-Content sowie der Backup-/Restore-
+Zyklus (echter pg_dump/pg_restore-Durchlauf gegen eine Wegwerf-Datenbank)
+sowie der Offsite-Upload inkl. der Sperre gegen den öffentlichen Bucket.
 
 Läuft bei jedem Push/PR automatisch über [GitHub Actions](../.github/workflows/ci.yml)
 (Lint + Tests, siehe Badge oben).
@@ -94,24 +96,148 @@ Deployment & Hosting): FastAPI-App in Docker, dahinter Caddy als Reverse
 Proxy mit automatischem Let's-Encrypt-TLS, Postgres läuft im selben
 Compose-Stack mit ("mitlaufende Instanz").
 
+> **Noch nicht verifiziert.** Image, Compose-Stack und Caddyfile sind bisher
+> auf keinem Rechner gebaut oder gestartet worden - auf der Entwicklungs-
+> maschine ist kein Container-Runtime installiert. Die YAML-Struktur ist
+> geprüft, die Laufzeit nicht. Beim ersten Aufsetzen also damit rechnen,
+> nachbessern zu müssen, und die Prüfschritte unten wirklich durchgehen.
+
+### 1. Server vorbereiten
+
+Gedacht für Ubuntu 24.04 LTS (Hetzner CX22 oder größer reicht für
+den Start). `scripts/provision-server.sh` erledigt die Schritte unten in
+einem Durchgang und ist mehrfach ausführbar:
+
 ```bash
-cp .env.example .env   # echte Werte eintragen, insbesondere POSTGRES_PASSWORD/SECRET_KEY
-# Domain(s) in Caddyfile anpassen (Default: vainea.de, www.vainea.de)
+sudo ./scripts/provision-server.sh --user vainea
+```
+
+Es legt den Deploy-Benutzer an, übernimmt dessen SSH-Schlüssel von root,
+aktiviert Firewall und automatische Sicherheitsupdates, installiert Docker
+und richtet den Backup-Cronjob ein. Zugangsdaten fasst es bewusst nicht an.
+Wer die Schritte lieber einzeln geht:
+
+```bash
+# Als root auf dem frischen Server
+adduser vainea && usermod -aG sudo vainea
+rsync --archive --chown=vainea:vainea ~/.ssh /home/vainea/
+```
+
+SSH-Login für root und Passwort-Logins abschalten (`/etc/ssh/sshd_config`:
+`PermitRootLogin no`, `PasswordAuthentication no`), danach
+`systemctl restart ssh`. **Vorher** in einer zweiten Sitzung prüfen, dass der
+Login als `vainea` funktioniert - sonst sperrt man sich aus.
+
+Firewall und Docker:
+
+```bash
+ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable
+curl -fsSL https://get.docker.com | sh
+usermod -aG docker vainea
+```
+
+### 2. DNS
+
+`vainea.de` und `www.vainea.de` per A-Record (und AAAA, falls IPv6) auf die
+Server-IP zeigen lassen. Caddy holt das Zertifikat erst, wenn die Domain
+auflöst und Port 80 erreichbar ist - DNS also vor dem ersten Start setzen.
+
+### 3. Starten
+
+```bash
+git clone <repo-url> && cd vainea/shop
+cp .env.example .env    # Werte eintragen, siehe unten
+# Domain(s) im Caddyfile anpassen (Default: vainea.de, www.vainea.de)
 docker compose up -d --build
 ```
 
-Migrationen laufen automatisch beim Container-Start (`docker-entrypoint.sh`).
-Einmalig danach seeden bzw. einen Admin-Account anlegen:
+Pflichtwerte in `.env`:
+
+| Variable | Hinweis |
+| --- | --- |
+| `POSTGRES_PASSWORD` | frei wählbar, wird für die interne DB-URL verwendet |
+| `SECRET_KEY` | `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `ADMIN_SESSION_SECRET` | zweiter, eigener Zufallswert |
+| `MOLLIE_API_KEY` | Live- oder Test-Key aus dem Mollie-Dashboard |
+| `MOLLIE_WEBHOOK_URL` | `https://vainea.de/checkout/webhook` - **muss öffentlich erreichbar sein**, sonst bleiben bezahlte Bestellungen auf `pending` |
+| `SMTP_*` | Zugangsdaten des Mailversenders für die Bestellbestätigung |
+
+Migrationen und Seed laufen automatisch beim Container-Start
+(`docker-entrypoint.sh`). Der Seed legt nur an, was fehlt, und überschreibt
+nichts - im Admin gepflegte Preise, Texte und Versandtarife überleben also
+jedes Deployment. Abschalten mit `SKIP_SEED=1`.
+
+Admin-Account anlegen (einmalig):
 
 ```bash
-docker compose exec app python -m scripts.seed
 docker compose exec app python -c "..."   # siehe Admin-Snippet oben
 ```
 
-Das Admin-Interface läuft vorerst unter `/admin` auf der Root-Domain (wie im
-Pflichtenheft vorgesehen) und kann später auf eine eigene Subdomain
-umziehen, ohne dass sich am Datenmodell etwas ändert - dafür ist im
-`Caddyfile` bereits ein auskommentierter Beispielblock hinterlegt.
+### 4. Nach dem ersten Start prüfen
+
+```bash
+docker compose ps                        # alle drei Services "running"/"healthy"
+docker compose logs caddy | grep -i cert # Zertifikat ausgestellt?
+curl -I https://vainea.de                # 200 + Strict-Transport-Security
+docker compose exec app alembic current  # Migrationsstand
+```
+
+### 5. Updates einspielen
+
+```bash
+git pull && docker compose up -d --build
+```
+
+Der Container migriert beim Start selbst. Bei einem Schema-Umbau mit
+Datenverlustrisiko vorher ein Backup ziehen (siehe unten).
+
+### 6. Backups
+
+`scripts/backup.sh` legt einen Dump unter `./backups` ab und räumt alte
+Dumps auf. `provision-server.sh` richtet dafür bereits einen Cronjob für
+03:20 Uhr ein.
+
+```bash
+./scripts/backup.sh                       # Dump jetzt
+RETENTION_DAYS=30 ./scripts/backup.sh     # längere Aufbewahrung
+```
+
+`pg_dump` läuft im postgres-Container, weil nur dort die zur Serverversion
+passende Binary liegt. Der Dump wird im custom-Format geschrieben und lässt
+sich damit transaktional zurückspielen:
+
+```bash
+./scripts/restore.sh backups/vainea-20260920-032000.dump
+```
+
+Der Restore fragt vorher nach und stoppt den app-Container für die Dauer der
+Wiederherstellung. **Er überschreibt den aktuellen Datenbestand** - alles,
+was nach dem Dump entstanden ist, geht verloren.
+
+#### Offsite-Kopie
+
+Ohne zweiten Ort schützt ein Backup nur vor Fehlbedienung, nicht vor dem
+Verlust des Servers. Ist `S3_BACKUP_BUCKET` gesetzt, lädt `backup.sh` jeden
+Dump zusätzlich in den Objektspeicher (Prefix `db/`) und räumt dort nach
+`BACKUP_RETENTION_DAYS` auf.
+
+> **Dafür einen eigenen, privaten Bucket anlegen.** Nicht den aus
+> `S3_BUCKET` - der ist für die Produktbilder absichtlich öffentlich lesbar,
+> und ein Datenbank-Dump enthält Namen, Adressen, E-Mail-Adressen und
+> Bestellhistorien. `scripts/upload_backup.py` bricht ab, wenn beide
+> Variablen auf denselben Bucket zeigen, aber ein eigener Bucket ist die
+> eigentliche Absicherung.
+
+Der Upload läuft im app-Container (dort liegen boto3 und die Zugangsdaten);
+`./backups` ist dafür nach `/backups` gemountet. Schlägt er fehl, bleibt das
+lokale Backup gültig - `backup.sh` warnt, bricht aber nicht ab.
+
+Bei Rechnungsdaten kommen handels- und steuerrechtliche Aufbewahrungsfristen
+dazu; die Aufbewahrung im Objektspeicher ist entsprechend zu wählen.
+
+Ob ein Backup wirklich etwas taugt, zeigt sich erst beim Zurückspielen -
+also gelegentlich einen Restore auf einer Testmaschine üben, nicht erst im
+Ernstfall.
 
 ### Produktbilder in den Objektspeicher migrieren
 

@@ -2,6 +2,7 @@
 
 from app.models.cart import Cart, CartItem
 from app.models.discount import DiscountCode, DiscountType
+from app.models.legal import LegalPage
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.product import Product, ProductImage, ProductSize, ProductStatus
 from app.models.shipping import ShippingRate, ShippingZone
@@ -14,6 +15,7 @@ __all__ = [
     "CartItem",
     "DiscountCode",
     "DiscountType",
+    "LegalPage",
     "Order",
     "OrderItem",
     "OrderStatus",
