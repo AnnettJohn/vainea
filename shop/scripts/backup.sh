@@ -49,6 +49,21 @@ echo "Backup geschrieben: $target ($(du -h "$target" | cut -f1))"
 deleted=$(find "$BACKUP_DIR" -name 'vainea-*.dump' -type f -mtime "+$RETENTION_DAYS" -print -delete | wc -l)
 echo "Aufbewahrung: $RETENTION_DAYS Tage, $deleted alte Dump(s) entfernt."
 
-echo
-echo "HINWEIS: Dieses Backup liegt auf demselben Server wie die Datenbank."
-echo "Erst eine Kopie an einem anderen Ort schützt vor Serververlust."
+# Offsite-Kopie in den Objektspeicher. Läuft im app-Container, weil dort
+# boto3 und die S3-Zugangsdaten liegen; ./backups ist dort nach /backups
+# gemountet (siehe docker-compose.yml). Ein fehlgeschlagener Upload soll das
+# lokale Backup nicht entwerten, deshalb kein set -e an dieser Stelle.
+if docker compose exec -T app python -m scripts.upload_backup "/backups/$(basename "$target")"; then
+    :
+else
+    status=$?
+    if [ "$status" -eq 2 ]; then
+        echo
+        echo "HINWEIS: Kein Offsite-Backup konfiguriert (S3_BACKUP_BUCKET)."
+        echo "Dieses Backup liegt auf demselben Server wie die Datenbank und"
+        echo "schützt damit nicht vor dem Verlust des Servers."
+    else
+        echo "WARNUNG: Offsite-Upload fehlgeschlagen (Exit $status)." >&2
+        echo "         Das lokale Backup unter $target ist trotzdem gültig." >&2
+    fi
+fi

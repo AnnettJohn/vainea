@@ -76,14 +76,15 @@ python -m pytest
 Startet für die Dauer des Testlaufs automatisch eine eigene, ephemere
 Postgres-Instanz und einen echten lokalen SMTP-Server (kein laufender
 Server/Docker nötig) und legt darin States/Produkte/Versandzonen wie im
-Seed-Skript an. 66 Tests decken die zentralen Flows ab: Warenkorb, Checkout
+Seed-Skript an. 71 Tests decken die zentralen Flows ab: Warenkorb, Checkout
 (inkl. DACH-Versandzonen und Ablehnung anderer Länder, Bestandsreservierung mit Race-Condition-Fall,
 Rabattcodes, Webhook-Idempotenz), Bestellbestätigungsmail (inkl. Ausfall-
 sicherheit bei SMTP-Fehlern), Login/Registrierung/Wishlist,
 SQLAdmin-Zugriffsschutz, Objektspeicher-Upload/URL-Migration (gegen einen
 von `moto` gemockten S3-Bucket), Sitemap/Schema.org-Markup sowie der aus
 dem Click-Dummy übernommene Homepage-Content sowie der Backup-/Restore-
-Zyklus (echter pg_dump/pg_restore-Durchlauf gegen eine Wegwerf-Datenbank).
+Zyklus (echter pg_dump/pg_restore-Durchlauf gegen eine Wegwerf-Datenbank)
+sowie der Offsite-Upload inkl. der Sperre gegen den öffentlichen Bucket.
 
 Läuft bei jedem Push/PR automatisch über [GitHub Actions](../.github/workflows/ci.yml)
 (Lint + Tests, siehe Badge oben).
@@ -213,12 +214,26 @@ Der Restore fragt vorher nach und stoppt den app-Container für die Dauer der
 Wiederherstellung. **Er überschreibt den aktuellen Datenbestand** - alles,
 was nach dem Dump entstanden ist, geht verloren.
 
-> **Die Dumps liegen auf derselben Platte wie die Datenbank.** Das schützt
-> vor Fehlbedienung und fehlgeschlagenen Migrationen, nicht vor dem Verlust
-> des Servers. Vor dem Livegang eine Kopie an einen zweiten Ort einrichten -
-> Hetzner Storage Box oder der ohnehin genutzte S3-kompatible
-> Objektspeicher. Bei Rechnungsdaten kommen handels- und steuerrechtliche
-> Aufbewahrungsfristen dazu.
+#### Offsite-Kopie
+
+Ohne zweiten Ort schützt ein Backup nur vor Fehlbedienung, nicht vor dem
+Verlust des Servers. Ist `S3_BACKUP_BUCKET` gesetzt, lädt `backup.sh` jeden
+Dump zusätzlich in den Objektspeicher (Prefix `db/`) und räumt dort nach
+`BACKUP_RETENTION_DAYS` auf.
+
+> **Dafür einen eigenen, privaten Bucket anlegen.** Nicht den aus
+> `S3_BUCKET` - der ist für die Produktbilder absichtlich öffentlich lesbar,
+> und ein Datenbank-Dump enthält Namen, Adressen, E-Mail-Adressen und
+> Bestellhistorien. `scripts/upload_backup.py` bricht ab, wenn beide
+> Variablen auf denselben Bucket zeigen, aber ein eigener Bucket ist die
+> eigentliche Absicherung.
+
+Der Upload läuft im app-Container (dort liegen boto3 und die Zugangsdaten);
+`./backups` ist dafür nach `/backups` gemountet. Schlägt er fehl, bleibt das
+lokale Backup gültig - `backup.sh` warnt, bricht aber nicht ab.
+
+Bei Rechnungsdaten kommen handels- und steuerrechtliche Aufbewahrungsfristen
+dazu; die Aufbewahrung im Objektspeicher ist entsprechend zu wählen.
 
 Ob ein Backup wirklich etwas taugt, zeigt sich erst beim Zurückspielen -
 also gelegentlich einen Restore auf einer Testmaschine üben, nicht erst im

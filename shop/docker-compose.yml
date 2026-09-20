@@ -38,7 +38,18 @@ services:
       # Seed beim Start abschalten, sobald der Katalog vollständig im Admin
       # gepflegt wird (er überschreibt zwar nichts, ist dann aber überflüssig).
       SKIP_SEED: ${SKIP_SEED:-0}
+      S3_BACKUP_BUCKET: ${S3_BACKUP_BUCKET:-}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+      S3_REGION: ${S3_REGION:-fsn1}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+      S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
     logging: *default-logging
+    volumes:
+      # Nur lesend: der Container lädt die Dumps hoch, erzeugt sie aber nicht.
+      - ./backups:/backups:ro
     depends_on:
       postgres:
         condition: service_healthy
