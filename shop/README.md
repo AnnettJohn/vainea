@@ -76,8 +76,8 @@ python -m pytest
 Startet für die Dauer des Testlaufs automatisch eine eigene, ephemere
 Postgres-Instanz und einen echten lokalen SMTP-Server (kein laufender
 Server/Docker nötig) und legt darin States/Produkte/Versandzonen wie im
-Seed-Skript an. 56 Tests decken die zentralen Flows ab: Warenkorb, Checkout
-(inkl. Versandzonen-Fallback, Bestandsreservierung mit Race-Condition-Fall,
+Seed-Skript an. 61 Tests decken die zentralen Flows ab: Warenkorb, Checkout
+(inkl. DACH-Versandzonen und Ablehnung anderer Länder, Bestandsreservierung mit Race-Condition-Fall,
 Rabattcodes, Webhook-Idempotenz), Bestellbestätigungsmail (inkl. Ausfall-
 sicherheit bei SMTP-Fehlern), Login/Registrierung/Wishlist,
 SQLAdmin-Zugriffsschutz, Objektspeicher-Upload/URL-Migration (gegen einen
@@ -94,24 +94,108 @@ Deployment & Hosting): FastAPI-App in Docker, dahinter Caddy als Reverse
 Proxy mit automatischem Let's-Encrypt-TLS, Postgres läuft im selben
 Compose-Stack mit ("mitlaufende Instanz").
 
+> **Noch nicht verifiziert.** Image, Compose-Stack und Caddyfile sind bisher
+> auf keinem Rechner gebaut oder gestartet worden - auf der Entwicklungs-
+> maschine ist kein Container-Runtime installiert. Die YAML-Struktur ist
+> geprüft, die Laufzeit nicht. Beim ersten Aufsetzen also damit rechnen,
+> nachbessern zu müssen, und die Prüfschritte unten wirklich durchgehen.
+
+### 1. Server vorbereiten
+
+Gedacht für Ubuntu 24.04 LTS (Hetzner CX22 oder größer reicht für
+den Start).
+
 ```bash
-cp .env.example .env   # echte Werte eintragen, insbesondere POSTGRES_PASSWORD/SECRET_KEY
-# Domain(s) in Caddyfile anpassen (Default: vainea.de, www.vainea.de)
+# Als root auf dem frischen Server
+adduser vainea && usermod -aG sudo vainea
+rsync --archive --chown=vainea:vainea ~/.ssh /home/vainea/
+```
+
+SSH-Login für root und Passwort-Logins abschalten (`/etc/ssh/sshd_config`:
+`PermitRootLogin no`, `PasswordAuthentication no`), danach
+`systemctl restart ssh`. **Vorher** in einer zweiten Sitzung prüfen, dass der
+Login als `vainea` funktioniert - sonst sperrt man sich aus.
+
+Firewall und Docker:
+
+```bash
+ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw enable
+curl -fsSL https://get.docker.com | sh
+usermod -aG docker vainea
+```
+
+### 2. DNS
+
+`vainea.de` und `www.vainea.de` per A-Record (und AAAA, falls IPv6) auf die
+Server-IP zeigen lassen. Caddy holt das Zertifikat erst, wenn die Domain
+auflöst und Port 80 erreichbar ist - DNS also vor dem ersten Start setzen.
+
+### 3. Starten
+
+```bash
+git clone <repo-url> && cd vainea/shop
+cp .env.example .env    # Werte eintragen, siehe unten
+# Domain(s) im Caddyfile anpassen (Default: vainea.de, www.vainea.de)
 docker compose up -d --build
 ```
 
-Migrationen laufen automatisch beim Container-Start (`docker-entrypoint.sh`).
-Einmalig danach seeden bzw. einen Admin-Account anlegen:
+Pflichtwerte in `.env`:
+
+| Variable | Hinweis |
+| --- | --- |
+| `POSTGRES_PASSWORD` | frei wählbar, wird für die interne DB-URL verwendet |
+| `SECRET_KEY` | `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `ADMIN_SESSION_SECRET` | zweiter, eigener Zufallswert |
+| `MOLLIE_API_KEY` | Live- oder Test-Key aus dem Mollie-Dashboard |
+| `MOLLIE_WEBHOOK_URL` | `https://vainea.de/checkout/webhook` - **muss öffentlich erreichbar sein**, sonst bleiben bezahlte Bestellungen auf `pending` |
+| `SMTP_*` | Zugangsdaten des Mailversenders für die Bestellbestätigung |
+
+Migrationen und Seed laufen automatisch beim Container-Start
+(`docker-entrypoint.sh`). Der Seed legt nur an, was fehlt, und überschreibt
+nichts - im Admin gepflegte Preise, Texte und Versandtarife überleben also
+jedes Deployment. Abschalten mit `SKIP_SEED=1`.
+
+Admin-Account anlegen (einmalig):
 
 ```bash
-docker compose exec app python -m scripts.seed
 docker compose exec app python -c "..."   # siehe Admin-Snippet oben
 ```
 
-Das Admin-Interface läuft vorerst unter `/admin` auf der Root-Domain (wie im
-Pflichtenheft vorgesehen) und kann später auf eine eigene Subdomain
-umziehen, ohne dass sich am Datenmodell etwas ändert - dafür ist im
-`Caddyfile` bereits ein auskommentierter Beispielblock hinterlegt.
+### 4. Nach dem ersten Start prüfen
+
+```bash
+docker compose ps                        # alle drei Services "running"/"healthy"
+docker compose logs caddy | grep -i cert # Zertifikat ausgestellt?
+curl -I https://vainea.de                # 200 + Strict-Transport-Security
+docker compose exec app alembic current  # Migrationsstand
+```
+
+### 5. Updates einspielen
+
+```bash
+git pull && docker compose up -d --build
+```
+
+Der Container migriert beim Start selbst. Bei einem Schema-Umbau mit
+Datenverlustrisiko vorher ein Backup ziehen (siehe unten).
+
+### 6. Backups
+
+**Aktuell nicht eingerichtet.** Die Datenbank liegt im Docker-Volume
+`postgres_data` auf genau einer Maschine; geht der Server verloren, sind
+Bestellungen, Konten und alle im Admin gepflegten Inhalte weg. Für einen
+Shop mit echten Bestellungen ist das vor dem Livegang zu lösen - zusätzlich
+gelten handels- und steuerrechtliche Aufbewahrungsfristen für Rechnungsdaten.
+
+Minimalvariante als täglicher Cronjob:
+
+```bash
+docker compose exec -T postgres pg_dump -U vainea vainea | gzip > backup-$(date +%F).sql.gz
+```
+
+Die Dumps gehören auf einen anderen Rechner oder in den Objektspeicher, nicht
+auf denselben Server. Hetzner Storage Box oder der bereits genutzte
+S3-kompatible Objektspeicher bieten sich an.
 
 ### Produktbilder in den Objektspeicher migrieren
 

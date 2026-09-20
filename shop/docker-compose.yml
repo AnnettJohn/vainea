@@ -8,6 +8,15 @@
 # .env.example) - docker compose lädt sie automatisch für die
 # ${VARIABLEN}-Interpolation unten.
 
+# Ohne Limit wachsen die JSON-Logs unbegrenzt und laufen irgendwann die
+# Serverplatte voll - auf einer einzelnen Hetzner-Maschine ein realistisches
+# Ausfallszenario. 3 x 10 MB je Service reichen für die Fehlersuche.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   app:
     build: .
@@ -26,6 +35,10 @@ services:
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
       SMTP_FROM_NAME: ${SMTP_FROM_NAME}
       ENVIRONMENT: production
+      # Seed beim Start abschalten, sobald der Katalog vollständig im Admin
+      # gepflegt wird (er überschreibt zwar nichts, ist dann aber überflüssig).
+      SKIP_SEED: ${SKIP_SEED:-0}
+    logging: *default-logging
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,6 +48,7 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_USER: vainea
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -50,6 +64,7 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "80:80"
       - "443:443"
