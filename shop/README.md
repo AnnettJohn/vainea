@@ -76,13 +76,14 @@ python -m pytest
 Startet für die Dauer des Testlaufs automatisch eine eigene, ephemere
 Postgres-Instanz und einen echten lokalen SMTP-Server (kein laufender
 Server/Docker nötig) und legt darin States/Produkte/Versandzonen wie im
-Seed-Skript an. 61 Tests decken die zentralen Flows ab: Warenkorb, Checkout
+Seed-Skript an. 66 Tests decken die zentralen Flows ab: Warenkorb, Checkout
 (inkl. DACH-Versandzonen und Ablehnung anderer Länder, Bestandsreservierung mit Race-Condition-Fall,
 Rabattcodes, Webhook-Idempotenz), Bestellbestätigungsmail (inkl. Ausfall-
 sicherheit bei SMTP-Fehlern), Login/Registrierung/Wishlist,
 SQLAdmin-Zugriffsschutz, Objektspeicher-Upload/URL-Migration (gegen einen
 von `moto` gemockten S3-Bucket), Sitemap/Schema.org-Markup sowie der aus
-dem Click-Dummy übernommene Homepage-Content.
+dem Click-Dummy übernommene Homepage-Content sowie der Backup-/Restore-
+Zyklus (echter pg_dump/pg_restore-Durchlauf gegen eine Wegwerf-Datenbank).
 
 Läuft bei jedem Push/PR automatisch über [GitHub Actions](../.github/workflows/ci.yml)
 (Lint + Tests, siehe Badge oben).
@@ -103,7 +104,17 @@ Compose-Stack mit ("mitlaufende Instanz").
 ### 1. Server vorbereiten
 
 Gedacht für Ubuntu 24.04 LTS (Hetzner CX22 oder größer reicht für
-den Start).
+den Start). `scripts/provision-server.sh` erledigt die Schritte unten in
+einem Durchgang und ist mehrfach ausführbar:
+
+```bash
+sudo ./scripts/provision-server.sh --user vainea
+```
+
+Es legt den Deploy-Benutzer an, übernimmt dessen SSH-Schlüssel von root,
+aktiviert Firewall und automatische Sicherheitsupdates, installiert Docker
+und richtet den Backup-Cronjob ein. Zugangsdaten fasst es bewusst nicht an.
+Wer die Schritte lieber einzeln geht:
 
 ```bash
 # Als root auf dem frischen Server
@@ -181,21 +192,37 @@ Datenverlustrisiko vorher ein Backup ziehen (siehe unten).
 
 ### 6. Backups
 
-**Aktuell nicht eingerichtet.** Die Datenbank liegt im Docker-Volume
-`postgres_data` auf genau einer Maschine; geht der Server verloren, sind
-Bestellungen, Konten und alle im Admin gepflegten Inhalte weg. Für einen
-Shop mit echten Bestellungen ist das vor dem Livegang zu lösen - zusätzlich
-gelten handels- und steuerrechtliche Aufbewahrungsfristen für Rechnungsdaten.
-
-Minimalvariante als täglicher Cronjob:
+`scripts/backup.sh` legt einen Dump unter `./backups` ab und räumt alte
+Dumps auf. `provision-server.sh` richtet dafür bereits einen Cronjob für
+03:20 Uhr ein.
 
 ```bash
-docker compose exec -T postgres pg_dump -U vainea vainea | gzip > backup-$(date +%F).sql.gz
+./scripts/backup.sh                       # Dump jetzt
+RETENTION_DAYS=30 ./scripts/backup.sh     # längere Aufbewahrung
 ```
 
-Die Dumps gehören auf einen anderen Rechner oder in den Objektspeicher, nicht
-auf denselben Server. Hetzner Storage Box oder der bereits genutzte
-S3-kompatible Objektspeicher bieten sich an.
+`pg_dump` läuft im postgres-Container, weil nur dort die zur Serverversion
+passende Binary liegt. Der Dump wird im custom-Format geschrieben und lässt
+sich damit transaktional zurückspielen:
+
+```bash
+./scripts/restore.sh backups/vainea-20260920-032000.dump
+```
+
+Der Restore fragt vorher nach und stoppt den app-Container für die Dauer der
+Wiederherstellung. **Er überschreibt den aktuellen Datenbestand** - alles,
+was nach dem Dump entstanden ist, geht verloren.
+
+> **Die Dumps liegen auf derselben Platte wie die Datenbank.** Das schützt
+> vor Fehlbedienung und fehlgeschlagenen Migrationen, nicht vor dem Verlust
+> des Servers. Vor dem Livegang eine Kopie an einen zweiten Ort einrichten -
+> Hetzner Storage Box oder der ohnehin genutzte S3-kompatible
+> Objektspeicher. Bei Rechnungsdaten kommen handels- und steuerrechtliche
+> Aufbewahrungsfristen dazu.
+
+Ob ein Backup wirklich etwas taugt, zeigt sich erst beim Zurückspielen -
+also gelegentlich einen Restore auf einer Testmaschine üben, nicht erst im
+Ernstfall.
 
 ### Produktbilder in den Objektspeicher migrieren
 
