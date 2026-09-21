@@ -50,4 +50,12 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)" || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# --proxy-headers/--forwarded-allow-ips: Ohne das ignoriert uvicorn die
+# X-Forwarded-*-Header von Caddy, weil die Anfrage aus dem Docker-Netz kommt
+# und nicht von 127.0.0.1. Die App haelt jede Anfrage dann fuer http, und
+# request.url_for() erzeugt http-URLs - also falsche Canonical-Angaben,
+# Schema.org-URLs und Sitemap-Eintraege auf einer reinen HTTPS-Seite.
+# "*" ist hier vertretbar: der Container ist nur ueber Caddy erreichbar
+# (expose statt ports), niemand kann die Header direkt setzen.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", \
+     "--proxy-headers", "--forwarded-allow-ips", "*"]
