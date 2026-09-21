@@ -60,6 +60,16 @@ else
     echo "         unbedingt einen Schlüssel für $DEPLOY_USER hinterlegen!" >&2
 fi
 
+say "sudo für '$DEPLOY_USER'"
+# adduser --disabled-password legt den Benutzer ohne Passwort an. In der
+# sudo-Gruppe zu sein nützt dann nichts: sudo fragt nach einem Passwort, das
+# es nicht gibt. Ohne diese Regel hätte der Benutzer nach dem Abschalten des
+# Root-Logins überhaupt keinen Weg zu Root-Rechten mehr.
+# Dieselbe Lösung nutzt Ubuntu für seinen Standard-Cloudbenutzer.
+printf '%s ALL=(ALL) NOPASSWD:ALL\n' "$DEPLOY_USER" > "/etc/sudoers.d/90-$DEPLOY_USER"
+chmod 440 "/etc/sudoers.d/90-$DEPLOY_USER"
+visudo -c -f "/etc/sudoers.d/90-$DEPLOY_USER"
+
 say "Firewall"
 ufw allow OpenSSH >/dev/null
 ufw allow 80/tcp >/dev/null
@@ -92,12 +102,12 @@ cat <<TXT
 
 == Fertig. Was jetzt noch manuell zu tun ist:
 
-1. SSH härten: in /etc/ssh/sshd_config
-       PermitRootLogin no
-       PasswordAuthentication no
-   danach 'systemctl restart ssh'.
-   VORHER in einer zweiten Sitzung testen, dass der Login als
-   '$DEPLOY_USER' funktioniert - sonst sperrst du dich aus.
+1. SSH härten - benutze dafür ./scripts/harden-ssh.sh aus dem Repo.
+   NICHT von Hand 'systemctl restart ssh' aufrufen: Ubuntu 24.04
+   startet SSH über ssh.socket, nicht über ssh.service. Ein Neustart
+   des Service verdrängt den Socket, und danach lauscht niemand mehr
+   auf Port 22 - der Zugang ist weg, bis man über die Notfallkonsole
+   des Anbieters wieder hineinkommt.
 
 2. Als '$DEPLOY_USER' neu anmelden (die Docker-Gruppe greift erst dann):
        git clone https://github.com/AnnettJohn/vainea.git ~/vainea
