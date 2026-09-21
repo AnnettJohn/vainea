@@ -5,7 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.core.admin_auth import AdminAuth
 from app.core.config import get_settings
+from app.core.legal import find_placeholders
 from app.models.discount import DiscountCode
+from app.models.legal import LegalPage
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.product import Product, ProductImage, ProductSize, ProductStatus
 from app.models.shipping import ShippingRate, ShippingZone
@@ -192,6 +194,42 @@ class ShippingRateAdmin(ModelView, model=ShippingRate):
     form_columns = [ShippingRate.zone, ShippingRate.method_name, ShippingRate.price]
 
 
+class LegalPageAdmin(ModelView, model=LegalPage):
+    name = "Rechtsseite"
+    name_plural = "Rechtsseiten"
+    icon = "fa-solid fa-scale-balanced"
+    column_list = [LegalPage.sort_order, LegalPage.title, LegalPage.slug, LegalPage.is_published, LegalPage.updated_at]
+    column_sortable_list = [LegalPage.sort_order, LegalPage.title]
+    column_default_sort = [(LegalPage.sort_order, False)]
+    form_columns = [
+        LegalPage.slug,
+        LegalPage.title,
+        LegalPage.body,
+        LegalPage.is_published,
+        LegalPage.sort_order,
+        LegalPage.meta_title,
+        LegalPage.meta_description,
+    ]
+
+    async def on_model_change(self, data, model, is_created, request):
+        """Veröffentlichen verhindern, solange Platzhalter im Text stehen.
+
+        Die Entwürfe enthalten Angaben wie [Firmenname] und Hinweise der Form
+        [RECHTLICH PRÜFEN: ...]. Ein Impressum ohne echte Firmendaten ist
+        nicht bloß unfertig, sondern ein Verstoß gegen die Impressumspflicht -
+        und ein Haken, den man versehentlich setzt, ist schnell gesetzt.
+        """
+        if not data.get("is_published"):
+            return
+        offen = find_placeholders(data.get("body") or "")
+        if offen:
+            beispiele = ", ".join(offen[:3])
+            raise ValueError(
+                f"Veröffentlichen nicht möglich: Der Text enthält noch {len(offen)} "
+                f"Platzhalter (z. B. {beispiele}). Bitte erst ersetzen."
+            )
+
+
 ADMIN_VIEWS: list[type[ModelView]] = [
     StateAdmin,
     ProductAdmin,
@@ -202,6 +240,7 @@ ADMIN_VIEWS: list[type[ModelView]] = [
     DiscountCodeAdmin,
     ShippingZoneAdmin,
     ShippingRateAdmin,
+    LegalPageAdmin,
 ]
 
 

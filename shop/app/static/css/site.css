@@ -898,6 +898,15 @@ a.quiz-mini-card{display:block;}
 
 /* ---------- Rechtstexte ---------- */
 .legal-body{max-width:70ch;margin-top:24px;color:var(--ink-70);line-height:1.7;}
+.legal-body h2{font-size:1.15rem;font-weight:700;color:var(--ink);margin-top:34px;}
+.legal-body h2:first-child{margin-top:0;}
+.legal-body h3{font-size:1rem;font-weight:700;color:var(--ink);margin-top:24px;}
+.legal-body p{margin-top:12px;}
+.legal-body ul{margin-top:12px;display:flex;flex-direction:column;gap:7px;}
+.legal-body li{padding-left:16px;position:relative;}
+.legal-body li::before{content:"\2013";position:absolute;left:0;color:var(--ink-30);}
+.legal-body a{text-decoration:underline;text-underline-offset:3px;}
+.legal-updated{margin-top:40px;font-size:.78rem;color:var(--ink-50);}
 .footer-legal{display:flex;gap:18px;flex-wrap:wrap;}
 
 /* ---------- PDP-Ergänzungen ---------- */

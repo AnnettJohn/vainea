@@ -76,6 +76,10 @@ select = ["E", "F", "W", "I"]
 # übernommen) - Umbrechen würde die Zeile-für-Zeile-Vergleichbarkeit mit
 # index.html zerstören.
 "scripts/seed.py" = ["E501"]
+# Rechtstexte sind Fließtext. Ein Umbruch wäre hier keine Formatierung,
+# sondern eine Inhaltsänderung: der Renderer macht aus Zeilenumbrüchen
+# <br>, der Absatz bekäme also mitten im Satz einen Zeilenwechsel.
+"scripts/legal_texts.py" = ["E501"]
 # Bewusst nicht-alphabetische Import-Reihenfolge, die einen zirkulären Import
 # umgeht (siehe Kommentar in der Datei) - ein isort/ruff-Autofix würde genau
 # diese Reihenfolge wieder zerstören.

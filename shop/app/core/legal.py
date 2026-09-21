@@ -86,3 +86,22 @@ def render_legal_body(body: str) -> str:
     flush_paragraph()
     flush_list()
     return "".join(html)
+
+
+# Eckige Klammern, die KEIN Markdown-Link sind (dort folgt direkt "(").
+_PLATZHALTER = re.compile(r"\[[^\]\n]{2,}\](?!\()")
+
+
+def find_placeholders(body: str) -> list[str]:
+    """Offene Platzhalter in einem Rechtstext finden.
+
+    Die Entwürfe enthalten Angaben wie [Firmenname] und Hinweise der Form
+    [RECHTLICH PRÜFEN: ...]. Ein Text mit solchen Stellen darf nicht
+    veröffentlicht werden - im günstigsten Fall ist er peinlich, im
+    ungünstigsten ein Abmahngrund, weil Pflichtangaben fehlen.
+
+    Markdown-Links wie [Text](https://...) sind keine Platzhalter.
+    """
+    gefunden = _PLATZHALTER.findall(body or "")
+    # Reihenfolge erhalten, Dubletten entfernen.
+    return list(dict.fromkeys(gefunden))

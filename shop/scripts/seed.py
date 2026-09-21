@@ -22,9 +22,11 @@ import uuid
 from sqlalchemy import select
 
 from app.db.session import async_session_maker
+from app.models.legal import LegalPage
 from app.models.product import Product, ProductImage, ProductSize, ProductStatus
 from app.models.shipping import ShippingRate, ShippingZone
 from app.models.state import State
+from scripts.legal_texts import LEGAL_PAGES
 
 
 def slugify(value: str) -> str:
@@ -283,15 +285,36 @@ async def seed_shipping_zones(session, overwrite: bool = False) -> None:
                 )
 
 
+async def seed_legal_pages(session, overwrite: bool = False) -> None:
+    """Rechtsseiten anlegen.
+
+    Ohne --force werden vorhandene Seiten nicht angefasst: die Texte werden
+    nach der juristischen Prüfung im Admin gepflegt, und der Seed läuft bei
+    jedem Containerstart. Er darf die geprüfte Fassung nicht zurücksetzen.
+
+    Angelegt wird bewusst unveröffentlicht (is_published=False), weil die
+    Entwürfe noch Platzhalter enthalten.
+    """
+    for data in LEGAL_PAGES:
+        result = await session.execute(select(LegalPage).where(LegalPage.slug == data["slug"]))
+        seite = result.scalar_one_or_none()
+        if seite is None:
+            session.add(LegalPage(**data, is_published=False))
+        elif overwrite:
+            for key, value in data.items():
+                setattr(seite, key, value)
+
+
 async def main(overwrite: bool = False) -> None:
     async with async_session_maker() as session:
         states_by_slug = await seed_states(session, overwrite=overwrite)
         await seed_products(session, states_by_slug, overwrite=overwrite)
         await seed_shipping_zones(session, overwrite=overwrite)
+        await seed_legal_pages(session, overwrite=overwrite)
         await session.commit()
     print(
         f"Seed abgeschlossen: {len(STATES)} States, {len(PRODUCTS)} Produkte, "
-        f"{len(SHIPPING_ZONES)} Versandzonen."
+        f"{len(SHIPPING_ZONES)} Versandzonen, {len(LEGAL_PAGES)} Rechtsseiten."
     )
 
 

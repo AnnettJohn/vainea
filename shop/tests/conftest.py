@@ -46,7 +46,12 @@ from app.models import (  # noqa: E402
     User,
     WishlistItem,
 )
-from scripts.seed import seed_products, seed_shipping_zones, seed_states  # noqa: E402
+from scripts.seed import (  # noqa: E402
+    seed_legal_pages,
+    seed_products,
+    seed_shipping_zones,
+    seed_states,
+)
 
 atexit.register(_srv.cleanup)
 
@@ -98,6 +103,7 @@ async def _schema_and_catalog():
         states = await seed_states(session)
         await seed_products(session, states)
         await seed_shipping_zones(session)
+        await seed_legal_pages(session)
         await session.commit()
 
     yield
