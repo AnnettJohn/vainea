@@ -8,7 +8,19 @@ from app.admin import register_admin
 from app.core.config import get_settings
 from app.core.users import auth_backend, fastapi_users
 from app.db.session import engine
-from app.routers import account, cart, checkout, home, legal, products, seo, shop, states, story
+from app.routers import (
+    account,
+    cart,
+    checkout,
+    consent,
+    home,
+    legal,
+    products,
+    seo,
+    shop,
+    states,
+    story,
+)
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 
 settings = get_settings()
@@ -38,6 +50,7 @@ app.include_router(cart.router)
 app.include_router(checkout.router)
 app.include_router(account.router)
 app.include_router(legal.router)
+app.include_router(consent.router)
 app.include_router(seo.router)
 
 # FastAPI-Users: Auth/Registrierung/Nutzerverwaltung

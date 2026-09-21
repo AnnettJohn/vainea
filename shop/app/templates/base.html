@@ -142,6 +142,8 @@
     </div>
   </footer>
 
+  {% if consent is not defined or consent is none %}{% include "partials/consent_banner.html" %}{% endif %}
+
   <div id="cart-toast"></div>
 
   <nav class="mobile-nav">

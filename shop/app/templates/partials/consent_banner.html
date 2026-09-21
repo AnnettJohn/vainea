@@ -1,0 +1,32 @@
+{#- Cookie-Einwilligung. Erscheint nur, solange keine Entscheidung vorliegt.
+
+    Beide Schaltflächen sind bewusst identisch gestaltet und gleich gross:
+    Ablehnen muss genauso leicht sein wie Zustimmen. Eine gefüllte
+    Zustimmung neben einer blassen Ablehnung wäre eine Gestaltung, die
+    zur Einwilligung drängt - deutsche Aufsichtsbehörden sehen darin
+    keine freiwillige Entscheidung. Der Banner ist ein normales Formular
+    und funktioniert ohne JavaScript.
+
+    Der Banner blockiert die Seite nicht - der Shop bleibt bedienbar, es
+    werden schlicht keine nicht-essenziellen Dienste geladen, solange nicht
+    zugestimmt wurde. -#}
+<div class="consent-banner" role="region" aria-label="Cookie-Einstellungen">
+  <div class="wrap consent-inner">
+    <div class="consent-text">
+      <strong>Cookies</strong>
+      <p>Für Warenkorb und Anmeldung setzen wir technisch notwendige Cookies — dafür brauchen wir keine Einwilligung. Darüber hinaus möchten wir Cookies für Reichweitenmessung und eingebettete Inhalte setzen. Das ist freiwillig und jederzeit widerrufbar. Mehr dazu in der <a href="/legal/datenschutz">Datenschutzerklärung</a>.</p>
+    </div>
+    <div class="consent-actions">
+      <form method="post" action="/consent">
+        <input type="hidden" name="next" value="{{ request.url.path }}">
+        <input type="hidden" name="choice" value="essential">
+        <button class="btn" type="submit">Nur notwendige</button>
+      </form>
+      <form method="post" action="/consent">
+        <input type="hidden" name="next" value="{{ request.url.path }}">
+        <input type="hidden" name="choice" value="all">
+        <button class="btn" type="submit">Alle akzeptieren</button>
+      </form>
+    </div>
+  </div>
+</div>

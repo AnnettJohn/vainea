@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cart import cart_count, get_cart_if_exists
+from app.core.consent import allows_optional, current_consent
 from app.core.nav import get_nav_states
 from app.core.users import current_user_optional
 from app.db.session import get_db
@@ -37,4 +38,7 @@ async def get_base_context(
         "cart_count": cart_count(cart),
         "current_user": user,
         "wishlist_ids": wishlist_ids,
+        # Einwilligung: None = noch nicht gefragt (Banner zeigen).
+        "consent": current_consent(request),
+        "consent_optional_allowed": allows_optional(request),
     }

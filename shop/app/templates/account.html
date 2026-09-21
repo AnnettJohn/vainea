@@ -58,6 +58,22 @@
         </ul>
         {% endif %}
       </div>
+
+      <div class="account-block">
+        <h2 class="h-editorial">Konto löschen</h2>
+        {#- Art. 17 DSGVO. Bestellungen bleiben erhalten: sie unterliegen der
+            handels- und steuerrechtlichen Aufbewahrungspflicht und sind ohne
+            Konto keiner Person mehr zuzuordnen. -#}
+        <p>Dein Konto wird dauerhaft entfernt, zusammen mit Merkzettel und Warenkorb. Das lässt sich nicht rückgängig machen.</p>
+        <p class="account-delete-note">Bereits aufgegebene Bestellungen bleiben bestehen — wir sind gesetzlich verpflichtet, Rechnungsdaten aufzubewahren. Sie sind danach nicht mehr mit deinem Konto verknüpft.</p>
+        {% if delete_error %}<p class="form-error">{{ delete_error }}</p>{% endif %}
+        <form method="post" action="/account/delete" class="account-delete-form">
+          <label>Zur Bestätigung <strong>LÖSCHEN</strong> eingeben
+            <input type="text" name="confirm" autocomplete="off" required>
+          </label>
+          <button type="submit" class="btn btn--ghost">Konto endgültig löschen</button>
+        </form>
+      </div>
     </div>
   </div>
 </section>

@@ -888,6 +888,36 @@ a.quiz-mini-card{display:block;}
 .order-meta{font-size:.8rem;color:var(--ink-50);}
 .wishlist-list li,.address-list li{display:flex;justify-content:space-between;align-items:center;gap:14px;}
 
+/* ---------- Konto-Löschung ---------- */
+.account-delete-note{margin-top:10px;font-size:.82rem;color:var(--ink-50);}
+.account-delete-form{margin-top:18px;display:flex;flex-direction:column;gap:12px;align-items:flex-start;}
+.account-delete-form label{display:flex;flex-direction:column;gap:6px;font-size:.8rem;font-weight:600;color:var(--ink-70);}
+.account-delete-form input{padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);font:inherit;}
+
+/* ---------- Cookie-Einwilligung ---------- */
+.consent-banner{
+  position:fixed;left:0;right:0;bottom:0;z-index:90;
+  background:var(--soft-white);border-top:1px solid var(--line);
+  box-shadow:0 -12px 40px -20px rgba(37,37,37,.4);
+  padding-block:20px;
+}
+.consent-inner{display:flex;gap:clamp(18px,3vw,40px);align-items:center;justify-content:space-between;flex-wrap:wrap;}
+.consent-text{max-width:62ch;}
+.consent-text strong{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;}
+.consent-text p{margin-top:8px;font-size:.84rem;line-height:1.55;color:var(--ink-70);}
+.consent-text a{text-decoration:underline;text-underline-offset:3px;}
+/* Beide Schaltflächen bewusst gleich groß: Ablehnen muss so leicht sein
+   wie Zustimmen. */
+.consent-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.consent-actions .btn{min-width:170px;justify-content:center;}
+@media (max-width:768px){
+  .consent-banner{bottom:70px;}
+  body.has-pdp .consent-banner{bottom:86px;}
+  .consent-actions{width:100%;}
+  .consent-actions form{flex:1;}
+  .consent-actions .btn{width:100%;min-width:0;}
+}
+
 /* ---------- Shop-Filter (Dummy nutzte einen Filter-Drawer) ---------- */
 .shop-filters{display:flex;gap:12px;margin-bottom:34px;flex-wrap:wrap;}
 .shop-filters select{

@@ -125,16 +125,9 @@ async def logout():
     return response
 
 
-@router.get("")
-async def account_home(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    base_context: dict = Depends(get_base_context),
-    user: User | None = Depends(current_user_optional),
-):
-    if user is None:
-        return _login_redirect(request)
-
+async def _account_context(request: Request, db: AsyncSession, user: User, **extra) -> dict:
+    """Kontext der Kontoseite. Wird sowohl beim normalen Aufruf als auch beim
+    erneuten Anzeigen nach einem Fehler gebraucht."""
     orders_result = await db.execute(
         select(Order)
         .options(selectinload(Order.items))
@@ -149,7 +142,6 @@ async def account_home(
         .where(WishlistItem.user_id == user.id)
         .order_by(WishlistItem.created_at.desc())
     )
-    wishlist = wishlist_result.scalars().all()
 
     # Kein eigenes Adressbuch-Modell (siehe Pflichtenheft-Datenmodell) - die
     # zuletzt verwendeten Liefer-/Rechnungsadressen stammen aus den fixierten
@@ -165,13 +157,75 @@ async def account_home(
         for o in orders[:5]
     ]
 
-    context = {
-        **base_context,
+    return {
+        **await get_base_context(request, db, user),
         "orders": orders,
-        "wishlist": wishlist,
+        "wishlist": wishlist_result.scalars().all(),
         "addresses": addresses,
         "page_title": "Mein Konto — VAINEA",
+        **extra,
     }
+
+
+@router.post("/delete")
+async def delete_account(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    bestaetigung: str = Form("", alias="confirm"),
+    user: User | None = Depends(current_user_optional),
+):
+    """Kundenkonto löschen (Art. 17 DSGVO).
+
+    Hier stehen zwei Pflichten gegeneinander: das Recht auf Löschung und die
+    handels- und steuerrechtliche Aufbewahrungspflicht für Rechnungsdaten
+    (§ 147 AO, § 257 HGB, in der Regel zehn Jahre). Art. 17 Abs. 3 lit. b
+    DSGVO löst das: die Löschpflicht gilt nicht, soweit die Verarbeitung zur
+    Erfüllung einer rechtlichen Verpflichtung erforderlich ist.
+
+    Umgesetzt heißt das:
+
+    - Das Konto selbst wird gelöscht. Über die Fremdschlüssel verschwinden
+      damit auch Merkzettel, Warenkörbe und verknüpfte Social-Logins.
+    - Bestellungen bleiben bestehen. Ihr `user_id` wird durch den
+      Fremdschlüssel auf NULL gesetzt, die Rechnungsdaten (Name, Anschrift)
+      bleiben als Momentaufnahme erhalten - sie SIND die aufzubewahrende
+      Rechnung.
+
+    Die Bestellungen lassen sich danach nicht mehr über das Konto einer
+    Person zuordnen, sondern nur noch über die Rechnung selbst. Genau das
+    ist gewollt.
+    """
+    if user is None:
+        return _login_redirect(request)
+
+    # Absichtsnachweis: ein versehentlicher Klick darf kein Konto löschen.
+    if bestaetigung.strip().upper() != "LÖSCHEN":
+        context = await _account_context(
+            request, db, user, delete_error="Bitte zur Bestätigung das Wort LÖSCHEN eingeben."
+        )
+        return templates.TemplateResponse(request, "account.html", context, status_code=400)
+
+    await db.delete(user)
+    await db.commit()
+
+    # Sitzungscookie mit entfernen - sonst zeigt der Browser weiter auf ein
+    # Konto, das es nicht mehr gibt.
+    response = await cookie_backend.transport.get_logout_response()
+    response.status_code = status.HTTP_303_SEE_OTHER
+    response.headers["location"] = "/?geloescht=1"
+    return response
+
+
+@router.get("")
+async def account_home(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    user: User | None = Depends(current_user_optional),
+):
+    if user is None:
+        return _login_redirect(request)
+
+    context = await _account_context(request, db, user)
     return templates.TemplateResponse(request, "account.html", context)
 
 
