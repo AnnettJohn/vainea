@@ -12,3 +12,6 @@ backups/
 
 # Caddy-Ergänzungen enthalten Zugangsdaten und gehören nur auf den Server
 caddy-extra/*.conf
+
+# Sicherungskopien der .env aus scripts/set-smtp.sh
+.env.backup-*
