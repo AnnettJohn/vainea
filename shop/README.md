@@ -145,7 +145,7 @@ auflöst und Port 80 erreichbar ist - DNS also vor dem ersten Start setzen.
 ### 3. Starten
 
 ```bash
-git clone <repo-url> && cd vainea/shop
+git clone https://github.com/AnnettJohn/vainea.git && cd vainea/shop
 cp .env.example .env    # Werte eintragen, siehe unten
 # Domain(s) im Caddyfile anpassen (Default: vainea.de, www.vainea.de)
 docker compose up -d --build

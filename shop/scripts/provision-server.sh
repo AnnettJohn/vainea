@@ -2,7 +2,7 @@
 # Frischen Ubuntu-24.04-Server für den VAINEA-Shop vorbereiten.
 # Als root auf der noch leeren Maschine ausführen:
 #
-#   curl -fsSL <raw-url>/scripts/provision-server.sh | sh -s -- --user vainea
+#   curl -fsSL https://raw.githubusercontent.com/AnnettJohn/vainea/main/shop/scripts/provision-server.sh | sh -s -- --user vainea
 #
 # oder nach dem Klonen des Repos:
 #
@@ -33,7 +33,9 @@ say "Systempakete aktualisieren"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get upgrade -y -qq
-apt-get install -y -qq ca-certificates curl ufw unattended-upgrades
+# git gehoert dazu: ein frisches Ubuntu-Cloud-Image bringt nicht zwingend
+# eines mit, und ohne git laesst sich das Repo auf dem Server nicht holen.
+apt-get install -y -qq ca-certificates curl git ufw unattended-upgrades
 
 say "Automatische Sicherheitsupdates aktivieren"
 dpkg-reconfigure -f noninteractive unattended-upgrades
@@ -98,7 +100,7 @@ cat <<TXT
    '$DEPLOY_USER' funktioniert - sonst sperrst du dich aus.
 
 2. Als '$DEPLOY_USER' neu anmelden (die Docker-Gruppe greift erst dann):
-       git clone <repo-url> ~/vainea
+       git clone https://github.com/AnnettJohn/vainea.git ~/vainea
        cd ~/vainea/shop
        cp .env.example .env    # Werte eintragen, siehe README
        # Domain(s) im Caddyfile anpassen
