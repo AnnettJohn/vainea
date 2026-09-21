@@ -81,6 +81,8 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Ergänzungen, die nur auf dem Server existieren (siehe Caddyfile).
+      - ./caddy-extra:/etc/caddy/extra:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

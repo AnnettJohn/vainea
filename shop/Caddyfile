@@ -33,6 +33,12 @@ vainea.de, www.vainea.de {
 	@static path /static/*
 	header @static Cache-Control "public, max-age=3600"
 
+	# Optionale Ergänzungen, die nur auf dem Server liegen - etwa der
+	# Zugriffsschutz vor dem Livegang. Das Glob-Muster darf ins Leere
+	# laufen; ohne Datei passiert schlicht nichts. Zugangsdaten gehören
+	# damit NICHT ins Repo.
+	import /etc/caddy/extra/*.conf
+
 	reverse_proxy app:8000
 
 	log {

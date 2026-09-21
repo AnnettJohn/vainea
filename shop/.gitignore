@@ -9,3 +9,6 @@ build/
 
 # Datenbank-Dumps von scripts/backup.sh - gehören nie ins Repo
 backups/
+
+# Caddy-Ergänzungen enthalten Zugangsdaten und gehören nur auf den Server
+caddy-extra/*.conf
