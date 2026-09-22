@@ -32,12 +32,24 @@ HOST=$(frage "SMTP-Server" "$(aktuell SMTP_HOST)")
 PORT=$(frage "Port (587 = STARTTLS)" "587")
 USER=$(frage "Benutzer (meist die volle E-Mail-Adresse)" "$(aktuell SMTP_USER)")
 
-# Passwort verdeckt einlesen.
-stty -echo 2>/dev/null || true
-printf 'Passwort: ' > /dev/tty
-read -r PASS < /dev/tty
-stty echo 2>/dev/null || true
-printf '\n' > /dev/tty
+# Passwort verdeckt einlesen - zweimal, weil ein Vertipper bei verdeckter
+# Eingabe sonst erst beim Versand auffaellt (und dann als "Anmeldung
+# abgelehnt" erscheint, was in die falsche Richtung weist).
+passwort_lesen() {
+    stty -echo 2>/dev/null || true
+    printf '%s: ' "$1" > /dev/tty
+    read -r eingabe < /dev/tty
+    stty echo 2>/dev/null || true
+    printf '\n' > /dev/tty
+    printf '%s' "$eingabe"
+}
+
+while : ; do
+    PASS=$(passwort_lesen "Passwort")
+    PASS2=$(passwort_lesen "Passwort wiederholen")
+    [ "$PASS" = "$PASS2" ] && break
+    echo "Die Eingaben stimmen nicht ueberein. Nochmal." > /dev/tty
+done
 
 FROM=$(frage "Absenderadresse" "$(aktuell SMTP_FROM_EMAIL)")
 
@@ -72,6 +84,14 @@ echo
 echo "Eingetragen. Container neu starten, damit die Werte greifen ..."
 docker compose up -d app > /dev/null 2>&1
 sleep 12
+
+echo "Pruefe Verbindung und Anmeldung ..."
+if ! docker compose exec -T app python -m scripts.check_smtp_login < /dev/null; then
+    echo
+    echo "Die Zugangsdaten wurden gespeichert, aber die Anmeldung schlaegt fehl." >&2
+    echo "Skript einfach erneut starten, um sie zu korrigieren." >&2
+    exit 1
+fi
 
 echo
 ZIEL=$(frage "Testmail senden an (leer = überspringen)" "")
